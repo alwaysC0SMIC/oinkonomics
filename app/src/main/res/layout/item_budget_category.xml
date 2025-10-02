@@ -1,36 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="0dp"
-    android:layout_height="120dp"
+    android:layout_height="wrap_content"
     android:layout_columnWeight="1"
     android:layout_gravity="fill_horizontal"
     android:layout_margin="8dp"
     android:background="@drawable/card_background"
     android:elevation="8dp"
-    android:gravity="center"
+    android:gravity="center_horizontal"
     android:orientation="vertical"
     android:padding="16dp">
-
-    <View
-        android:id="@+id/category_color"
-        android:layout_width="60dp"
-        android:layout_height="60dp"
-        android:layout_marginBottom="8dp"
-        android:elevation="4dp" />
 
     <TextView
         android:id="@+id/category_name"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:text="Category"
         android:textColor="#333333"
-        android:textSize="12sp"
+        android:textSize="16sp"
         android:textStyle="bold" />
+
+    <ProgressBar
+        android:id="@+id/category_progress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:max="100"
+        android:progress="50" />
 
     <TextView
         android:id="@+id/category_amount"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:text="R0 / R0"
         android:textColor="#666666"
-        android:textSize="10sp" />
+        android:textSize="12sp" />
 
 </LinearLayout>
