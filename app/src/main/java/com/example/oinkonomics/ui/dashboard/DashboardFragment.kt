@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.GridLayout
 import android.widget.LinearLayout
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import com.example.oinkonomics.R
 
@@ -22,8 +23,15 @@ class DashboardFragment : Fragment() {
         val addCategoryButton = root.findViewById<LinearLayout>(R.id.add_category_button)
 
         addCategoryButton.setOnClickListener {
-            val newCategory = inflater.inflate(R.layout.item_budget_category, gridLayout, false)
-            gridLayout.addView(newCategory, gridLayout.childCount - 1)
+            AlertDialog.Builder(requireContext())
+                .setTitle("Add New Category")
+                .setMessage("Do you want to add a new budget category?")
+                .setPositiveButton("Confirm") { _, _ ->
+                    val newCategory = inflater.inflate(R.layout.item_budget_category, gridLayout, false)
+                    gridLayout.addView(newCategory, gridLayout.childCount - 1)
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
         }
 
         return root
