@@ -4,36 +4,28 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
+import android.widget.GridLayout
+import android.widget.LinearLayout
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
-import com.example.oinkonomics.databinding.FragmentDashboardBinding
+import com.example.oinkonomics.R
 
 class DashboardFragment : Fragment() {
-
-    private var _binding: FragmentDashboardBinding? = null
-
-    // This property is only valid between onCreateView and
-    // onDestroyView.
-    private val binding get() = _binding!!
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View {
-        val dashboardViewModel =
-            ViewModelProvider(this).get(DashboardViewModel::class.java)
+    ): View? {
+        val root = inflater.inflate(R.layout.fragment_dashboard, container, false)
 
-        _binding = FragmentDashboardBinding.inflate(inflater, container, false)
-        val root: View = binding.root
+        val gridLayout = root.findViewById<GridLayout>(R.id.categories_grid)
+        val addCategoryButton = root.findViewById<LinearLayout>(R.id.add_category_button)
 
-        // Custom layout implemented - no need for placeholder text
+        addCategoryButton.setOnClickListener {
+            val newCategory = inflater.inflate(R.layout.item_budget_category, gridLayout, false)
+            gridLayout.addView(newCategory, gridLayout.childCount - 1)
+        }
+
         return root
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
     }
 }
