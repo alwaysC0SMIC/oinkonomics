@@ -38,6 +38,7 @@
                 android:orientation="horizontal">
 
                 <TextView
+                    android:id="@+id/total_spent_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Spent"
@@ -51,20 +52,22 @@
                     android:layout_weight="1" />
 
                 <TextView
+                    android:id="@+id/total_left_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="R5000 left"
+                    android:text="R0 left"
                     android:textColor="#666666"
                     android:textSize="14sp" />
 
             </LinearLayout>
 
             <ProgressBar
+                android:id="@+id/total_progress_bar"
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="match_parent"
                 android:layout_height="8dp"
                 android:layout_marginTop="8dp"
-                android:progress="50"
+                android:progress="0"
                 android:progressTint="#4CAF50" />
 
         </LinearLayout>

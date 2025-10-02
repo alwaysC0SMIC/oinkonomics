@@ -20,6 +20,9 @@ class DashboardFragment : Fragment() {
 
     private val budgetCategories = ArrayList<BudgetCategory>()
     private lateinit var gridLayout: GridLayout
+    private lateinit var totalSpentTextView: TextView
+    private lateinit var totalLeftTextView: TextView
+    private lateinit var totalProgressBar: ProgressBar
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -29,11 +32,16 @@ class DashboardFragment : Fragment() {
         val root = inflater.inflate(R.layout.fragment_dashboard, container, false)
 
         gridLayout = root.findViewById(R.id.categories_grid)
+        totalSpentTextView = root.findViewById(R.id.total_spent_text)
+        totalLeftTextView = root.findViewById(R.id.total_left_text)
+        totalProgressBar = root.findViewById(R.id.total_progress_bar)
         val addCategoryButton = root.findViewById<LinearLayout>(R.id.add_category_button)
 
         addCategoryButton.setOnClickListener {
             showAddCategoryDialog()
         }
+
+        updateTotalProgress()
 
         return root
     }
@@ -72,6 +80,7 @@ class DashboardFragment : Fragment() {
         }
 
         gridLayout.addView(categoryView, gridLayout.childCount - 1)
+        updateTotalProgress()
     }
 
     private fun showEditSpentDialog(category: BudgetCategory) {
@@ -87,6 +96,7 @@ class DashboardFragment : Fragment() {
                 if (spentAmount != null) {
                     category.spentAmount = spentAmount
                     updateAllCategoryViews()
+                    updateTotalProgress()
                 } else {
                     Toast.makeText(requireContext(), "Invalid amount", Toast.LENGTH_SHORT).show()
                 }
@@ -112,5 +122,21 @@ class DashboardFragment : Fragment() {
         amountTextView.text = "R${category.spentAmount} / R${category.maxAmount}"
         progressBar.max = category.maxAmount.toInt()
         progressBar.progress = category.spentAmount.toInt()
+    }
+
+    private fun updateTotalProgress() {
+        var totalSpent = 0.0
+        var totalMax = 0.0
+        for (category in budgetCategories) {
+            totalSpent += category.spentAmount
+            totalMax += category.maxAmount
+        }
+
+        val totalLeft = totalMax - totalSpent
+
+        totalSpentTextView.text = "Total Spent"
+        totalLeftTextView.text = "R${totalLeft} left"
+        totalProgressBar.max = totalMax.toInt()
+        totalProgressBar.progress = totalSpent.toInt()
     }
 }
