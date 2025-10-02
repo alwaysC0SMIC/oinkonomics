@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#FFF5E6"
-    tools:context=".ui.notifications.NotificationsFragment">
+    tools:context=".ui.debttracker.DebtTrackerFragment">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -13,7 +13,7 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Monthly Total Header -->
+        <!-- Debt Total Header -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -23,29 +23,64 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Monthly Total:"
+                android:text="Debt Total:"
                 android:textColor="#333333"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/text_notifications"
+                android:id="@+id/text_debttracker"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="R1600"
+                android:text="R6200"
                 android:textColor="#333333"
                 android:textSize="32sp"
                 android:textStyle="bold" />
 
+            <ProgressBar
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:layout_marginTop="8dp"
+                android:progress="25"
+                android:progressTint="#4CAF50" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="R2500 paid"
+                    android:textColor="#666666"
+                    android:textSize="12sp" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="R3700 left"
+                    android:textColor="#666666"
+                    android:textSize="12sp" />
+
+            </LinearLayout>
+
         </LinearLayout>
 
-        <!-- Subscription Items -->
+        <!-- Debt Items -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Netflix -->
+            <!-- Auto Loan -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -54,12 +89,6 @@
                 android:elevation="8dp"
                 android:orientation="horizontal"
                 android:padding="16dp">
-
-                <View
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginEnd="16dp"
-                    android:background="@drawable/circle_red" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -70,7 +99,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Netflix"
+                        android:text="Auto Loan"
                         android:textColor="#333333"
                         android:textSize="16sp"
                         android:textStyle="bold" />
@@ -78,72 +107,44 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Renews 1 Sep"
+                        android:text="R1000 outstanding"
+                        android:textColor="#666666"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Due 17 Sep"
                         android:textColor="#666666"
                         android:textSize="12sp" />
 
                 </LinearLayout>
 
-                <TextView
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="R261,74"
-                    android:textColor="#333333"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-            </LinearLayout>
-
-            <!-- Spotify -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:background="@drawable/card_background"
-                android:elevation="8dp"
-                android:orientation="horizontal"
-                android:padding="16dp">
-
-                <View
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginEnd="16dp"
-                    android:background="@drawable/circle_green" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
+                    android:gravity="center"
                     android:orientation="vertical">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Spotify"
+                        android:text="R2800"
                         android:textColor="#333333"
-                        android:textSize="16sp"
+                        android:textSize="18sp"
                         android:textStyle="bold" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Renews 1 Sep"
-                        android:textColor="#666666"
-                        android:textSize="12sp" />
+                    <View
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/circle_green" />
 
                 </LinearLayout>
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="R174,49"
-                    android:textColor="#333333"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
             </LinearLayout>
 
-            <!-- Add New Subscription Button -->
+            <!-- Add New Debt Button -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="60dp"

@@ -18,13 +18,20 @@
         tools:layout="@layout/fragment_dashboard" />
 
     <fragment
+        android:id="@+id/navigation_debttracker"
+        android:name="com.example.oinkonomics.ui.debttracker.DebtTrackerFragment"
+        android:label="@string/title_debttracker"
+        tools:layout="@layout/fragment_debttracker" />
+
+    <fragment
         android:id="@+id/navigation_subscriptions"
         android:name="com.example.oinkonomics.ui.notifications.NotificationsFragment"
-        android:label="@string/title_debttracker"
+        android:label="@string/title_subscriptions"
         tools:layout="@layout/fragment_notifications" />
+
     <fragment
-        android:id="@+id/navigation_debttracker"
-        android:name="com.example.oinkonomics.navigation_debttracker"
-        android:label="navigation_debttracker"
-        tools:layout="@layout/navigation_debttracker" />
+        android:id="@+id/navigation_more"
+        android:name="com.example.oinkonomics.ui.more.MoreFragment"
+        android:label="@string/title_more"
+        tools:layout="@layout/fragment_more" />
 </navigation>
