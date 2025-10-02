@@ -78,35 +78,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:columnCount="2"
-            android:orientation="horizontal">
-
-            <!-- Add New Category -->
-            <LinearLayout
-                android:id="@+id/add_category_button"
-                android:layout_width="0dp"
-                android:layout_height="120dp"
-                android:layout_columnWeight="1"
-                android:layout_gravity="fill_horizontal"
-                android:layout_margin="8dp"
-                android:background="@drawable/card_background"
-                android:elevation="8dp"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="60dp"
-                    android:layout_height="60dp"
-                    android:background="#E0E0E0"
-                    android:gravity="center"
-                    android:text="+"
-                    android:textColor="#666666"
-                    android:textSize="32sp"
-                    android:textStyle="bold" />
-
-            </LinearLayout>
-
-        </GridLayout>
+            android:alignmentMode="alignMargins"
+            android:useDefaultMargins="true"
+            android:orientation="horizontal" />
 
     </LinearLayout>
 

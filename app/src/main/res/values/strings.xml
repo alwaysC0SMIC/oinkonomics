@@ -2,7 +2,7 @@
     <string name="app_name">Oinkonomics</string>
 
 
-    //MENU BUTTONS
+    <!-- MENU BUTTONS -->
     <string name="title_home">Home</string>
     <string name="title_piggybanks">Piggy Banks</string>
     <string name="title_debttracker">Debt Tracker</string>
@@ -10,6 +10,12 @@
     <string name="title_more">More</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
-    <string name="category_options">Category options</string>
 
+    <string name="edit_category_title">Edit Category</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="remove_category">Remove Category</string>
+    <string name="remove_category_confirmation">Are you sure you want to remove this category?</string>
+    <string name="remove">Remove</string>
+    <string name="invalid_category_inputs">Please provide a name and numeric amounts.</string>
 </resources>
