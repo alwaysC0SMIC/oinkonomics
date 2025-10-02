@@ -14,6 +14,17 @@
         android:padding="16dp">
 
         <!-- Spent Progress Bar -->
+
+        <TextView
+            android:id="@+id/titleName5"
+            android:layout_width="match_parent"
+            android:layout_height="142dp"
+            android:gravity="center|left"
+            android:text="Piggy Banks"
+            android:textColor="#333333"
+            android:textSize="60sp"
+            android:textStyle="bold" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

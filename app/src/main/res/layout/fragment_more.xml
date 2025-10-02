@@ -14,6 +14,17 @@
         android:padding="16dp">
 
         <!-- Profile Section -->
+
+        <TextView
+            android:id="@+id/titleName3"
+            android:layout_width="match_parent"
+            android:layout_height="142dp"
+            android:gravity="center|left"
+            android:text="Account"
+            android:textColor="#333333"
+            android:textSize="60sp"
+            android:textStyle="bold" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -23,19 +34,10 @@
 
             <!-- Profile Picture -->
             <View
-                android:layout_width="100dp"
-                android:layout_height="100dp"
+                android:layout_width="176dp"
+                android:layout_height="178dp"
                 android:layout_marginBottom="16dp"
                 android:background="@drawable/circle_gray" />
-
-            <TextView
-                android:id="@+id/text_more"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="[Account Name]"
-                android:textColor="#333333"
-                android:textSize="20sp"
-                android:textStyle="bold" />
 
         </LinearLayout>
 

@@ -11,9 +11,20 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="26dp">
 
         <!-- Overview Card -->
+
+        <TextView
+            android:id="@+id/titleName"
+            android:layout_width="match_parent"
+            android:layout_height="142dp"
+            android:gravity="center|left"
+            android:text="Home"
+            android:textColor="#333333"
+            android:textSize="60sp"
+            android:textStyle="bold" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
