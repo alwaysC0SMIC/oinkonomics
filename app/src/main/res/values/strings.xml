@@ -16,6 +16,7 @@
   <string name="remove_category_confirmation">Are you sure you want to remove this category?</string>
   <string name="remove">Remove</string>
   <string name="invalid_category_inputs">Please provide a name and numeric amounts.</string>
+  <string name="error_saving_category">Unable to save category. Please try again.</string>
   <!-- AUTH -->
   <string name="login_title">Welcome back</string>
   <string name="register_title">Create your account</string>
