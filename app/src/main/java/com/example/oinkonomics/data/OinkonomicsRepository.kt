@@ -14,25 +14,17 @@ class OinkonomicsRepository(context: Context) {
         database.getCategories(userId)
     }
 
-    suspend fun createBudgetCategory(
-        userId: Long,
-        name: String,
-        maxAmount: Double,
-        spentAmount: Double = 0.0
-    ): BudgetCategory = withContext(Dispatchers.IO) {
-        val category = BudgetCategory(
-            userId = userId,
-            name = name,
-            maxAmount = maxAmount,
-            spentAmount = spentAmount
-        )
-        val id = database.insertCategory(category)
-        if (id == -1L) {
-            throw IllegalStateException("Unable to persist budget category")
+    suspend fun createBudgetCategory(userId: Long, name: String, maxAmount: Double, spentAmount: Double = 0.0): BudgetCategory =
+        withContext(Dispatchers.IO) {
+            val category = BudgetCategory(
+                userId = userId,
+                name = name,
+                maxAmount = maxAmount,
+                spentAmount = spentAmount
+            )
+            val id = database.insertCategory(category)
+            category.copy(id = id)
         }
-        database.getCategory(id, userId)
-            ?: throw IllegalStateException("Unable to load budget category after creation")
-    }
 
     suspend fun updateBudgetCategory(category: BudgetCategory) = withContext(Dispatchers.IO) {
         database.updateCategory(category)
