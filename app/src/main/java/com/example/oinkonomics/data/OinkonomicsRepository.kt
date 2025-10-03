@@ -11,11 +11,13 @@ class OinkonomicsRepository(context: Context) {
     private val database = OinkonomicsDatabase(context.applicationContext)
 
     suspend fun getBudgetCategories(userId: Long): List<BudgetCategory> = withContext(Dispatchers.IO) {
+        ensureValidUser(userId)
         database.getCategories(userId)
     }
 
     suspend fun createBudgetCategory(userId: Long, name: String, maxAmount: Double, spentAmount: Double = 0.0): BudgetCategory =
         withContext(Dispatchers.IO) {
+            ensureValidUser(userId)
             val category = BudgetCategory(
                 userId = userId,
                 name = name,
@@ -27,14 +29,17 @@ class OinkonomicsRepository(context: Context) {
         }
 
     suspend fun updateBudgetCategory(category: BudgetCategory) = withContext(Dispatchers.IO) {
+        ensureValidUser(category.userId)
         database.updateCategory(category)
     }
 
     suspend fun deleteBudgetCategory(categoryId: Long, userId: Long) = withContext(Dispatchers.IO) {
+        ensureValidUser(userId)
         database.deleteCategory(categoryId, userId)
     }
 
     suspend fun getExpenses(userId: Long): List<Expense> = withContext(Dispatchers.IO) {
+        ensureValidUser(userId)
         database.getExpenses(userId)
     }
 
@@ -46,6 +51,7 @@ class OinkonomicsRepository(context: Context) {
         date: LocalDate,
         receiptUri: String?
     ): Expense = withContext(Dispatchers.IO) {
+        ensureValidUser(userId)
         val expense = Expense(
             userId = userId,
             categoryId = categoryId,
@@ -62,11 +68,13 @@ class OinkonomicsRepository(context: Context) {
     }
 
     suspend fun updateExpense(expense: Expense): Boolean = withContext(Dispatchers.IO) {
+        ensureValidUser(expense.userId)
         val existing = database.getExpense(expense.id, expense.userId) ?: return@withContext false
         database.updateExpense(expense, existing.amount, existing.categoryId)
     }
 
     suspend fun deleteExpense(expenseId: Long, userId: Long): Boolean = withContext(Dispatchers.IO) {
+        ensureValidUser(userId)
         database.deleteExpense(expenseId, userId)
     }
 
@@ -91,5 +99,11 @@ class OinkonomicsRepository(context: Context) {
         val digest = MessageDigest.getInstance("SHA-256")
         val hashBytes = digest.digest(toByteArray())
         return hashBytes.joinToString(separator = "") { byte -> "%02x".format(byte) }
+    }
+
+    private fun ensureValidUser(userId: Long) {
+        if (!database.userExistsById(userId)) {
+            throw MissingUserException()
+        }
     }
 }
