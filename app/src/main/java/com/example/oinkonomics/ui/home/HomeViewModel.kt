@@ -41,7 +41,7 @@ class HomeViewModel(
                 val categories = repository.getBudgetCategories(userId)
                 val expenses = repository.getExpenses(userId)
                 val totalBudget = categories.sumOf { it.maxAmount }
-                val totalSpent = categories.sumOf { it.spentAmount }
+                val totalSpent = expenses.sumOf { it.amount }
                 _uiState.value = HomeUiState(
                     isLoading = false,
                     expenses = expenses,
@@ -62,7 +62,7 @@ class HomeViewModel(
         name: String,
         amount: Double,
         date: LocalDate,
-        categoryId: Long,
+        categoryId: Long?,
         receiptUri: String?
     ) {
         if (userId < 0) return
@@ -81,7 +81,7 @@ class HomeViewModel(
         name: String,
         amount: Double,
         date: LocalDate,
-        categoryId: Long,
+        categoryId: Long?,
         receiptUri: String?
     ) {
         if (userId < 0) return

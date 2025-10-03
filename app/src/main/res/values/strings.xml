@@ -36,8 +36,7 @@
   <string name="home_total_spent_value">%1$s / %2$s</string>
   <string name="home_total_left_value">%1$s left</string>
   <string name="home_this_month_label">This Month</string>
-  <string name="home_unknown_category">Unknown category</string>
-  <string name="home_no_categories_warning">Create a budget category on the dashboard before adding expenses.</string>
+  <string name="home_category_none_option">Uncategorized</string>
   <string name="home_add_expense_title">New Expense</string>
   <string name="home_edit_expense_title">Edit Expense</string>
   <string name="home_dialog_confirm">Confirm</string>
