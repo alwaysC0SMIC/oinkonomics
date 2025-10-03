@@ -8,10 +8,10 @@ import java.time.LocalDate
 
 class OinkonomicsRepository(context: Context) {
 
-    private val dao = OinkonomicsDatabase.getInstance(context.applicationContext).oinkonomicsDao()
+    private val database = OinkonomicsDatabase(context.applicationContext)
 
     suspend fun getBudgetCategories(userId: Long): List<BudgetCategory> = withContext(Dispatchers.IO) {
-        dao.getCategories(userId)
+        database.getCategories(userId)
     }
 
     suspend fun createBudgetCategory(userId: Long, name: String, maxAmount: Double, spentAmount: Double = 0.0): BudgetCategory =
@@ -22,20 +22,20 @@ class OinkonomicsRepository(context: Context) {
                 maxAmount = maxAmount,
                 spentAmount = spentAmount
             )
-            val id = dao.insertCategory(category)
+            val id = database.insertCategory(category)
             category.copy(id = id)
         }
 
     suspend fun updateBudgetCategory(category: BudgetCategory) = withContext(Dispatchers.IO) {
-        dao.updateCategory(category)
+        database.updateCategory(category)
     }
 
     suspend fun deleteBudgetCategory(categoryId: Long, userId: Long) = withContext(Dispatchers.IO) {
-        dao.deleteCategory(categoryId, userId)
+        database.deleteCategory(categoryId, userId)
     }
 
     suspend fun getExpenses(userId: Long): List<Expense> = withContext(Dispatchers.IO) {
-        dao.getExpenses(userId)
+        database.getExpenses(userId)
     }
 
     suspend fun createExpense(
@@ -54,7 +54,7 @@ class OinkonomicsRepository(context: Context) {
             dateIso = date.toString(),
             receiptUri = receiptUri
         )
-        val id = dao.insertExpense(expense)
+        val id = database.insertExpense(expense)
         if (id == -1L) {
             throw IllegalStateException("Unable to persist expense")
         }
@@ -62,20 +62,20 @@ class OinkonomicsRepository(context: Context) {
     }
 
     suspend fun updateExpense(expense: Expense): Boolean = withContext(Dispatchers.IO) {
-        val existing = dao.getExpense(expense.id, expense.userId) ?: return@withContext false
-        dao.updateExpense(expense, existing.amount, existing.categoryId)
+        val existing = database.getExpense(expense.id, expense.userId) ?: return@withContext false
+        database.updateExpense(expense, existing.amount, existing.categoryId)
     }
 
     suspend fun deleteExpense(expenseId: Long, userId: Long): Boolean = withContext(Dispatchers.IO) {
-        dao.deleteExpense(expenseId, userId)
+        database.deleteExpense(expenseId, userId)
     }
 
     suspend fun registerUser(username: String, password: String): Result<Long> = withContext(Dispatchers.IO) {
-        if (dao.userExists(username)) {
+        if (database.userExists(username)) {
             return@withContext Result.failure(IllegalStateException("Username already taken"))
         }
         val hashed = password.sha256()
-        val id = dao.insertUser(User(username = username, passwordHash = hashed))
+        val id = database.insertUser(username, hashed)
         if (id == -1L) {
             Result.failure(IllegalStateException("Unable to register user"))
         } else {
@@ -84,7 +84,7 @@ class OinkonomicsRepository(context: Context) {
     }
 
     suspend fun authenticate(username: String, password: String): Long? = withContext(Dispatchers.IO) {
-        dao.getUserIdIfValid(username, password.sha256())
+        database.getUserIdIfValid(username, password.sha256())
     }
 
     private fun String.sha256(): String {
