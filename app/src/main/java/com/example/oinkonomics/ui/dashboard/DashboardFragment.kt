@@ -131,10 +131,18 @@ class DashboardFragment : Fragment() {
     private fun addCategory(name: String, maxAmount: Double) {
         val currentUserId = userId ?: return
         viewLifecycleOwner.lifecycleScope.launch {
-            val newCategory = repository.createBudgetCategory(currentUserId, name, maxAmount)
-            budgetCategories.add(newCategory)
-            renderCategories()
-            updateTotalProgress()
+            try {
+                val newCategory = repository.createBudgetCategory(currentUserId, name, maxAmount)
+                budgetCategories.add(newCategory)
+                renderCategories()
+                updateTotalProgress()
+            } catch (ex: Exception) {
+                Toast.makeText(
+                    requireContext(),
+                    ex.message ?: getString(R.string.error_saving_category),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
     }
 
