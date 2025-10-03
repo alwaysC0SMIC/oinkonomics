@@ -81,6 +81,13 @@ class DashboardFragment : Fragment() {
         return root
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (this::gridLayout.isInitialized) {
+            loadCategories()
+        }
+    }
+
     private fun configureAddButton() {
         val neutralColor = ContextCompat.getColor(requireContext(), R.color.text_grey)
         val ring = addCategoryButton.findViewById<RadialProgressView>(R.id.add_progress_ring)

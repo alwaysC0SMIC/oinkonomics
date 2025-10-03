@@ -4,6 +4,7 @@ import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest
+import java.time.LocalDate
 
 class OinkonomicsRepository(context: Context) {
 
@@ -31,6 +32,42 @@ class OinkonomicsRepository(context: Context) {
 
     suspend fun deleteBudgetCategory(categoryId: Long, userId: Long) = withContext(Dispatchers.IO) {
         database.deleteCategory(categoryId, userId)
+    }
+
+    suspend fun getExpenses(userId: Long): List<Expense> = withContext(Dispatchers.IO) {
+        database.getExpenses(userId)
+    }
+
+    suspend fun createExpense(
+        userId: Long,
+        categoryId: Long,
+        name: String,
+        amount: Double,
+        date: LocalDate,
+        receiptUri: String?
+    ): Expense = withContext(Dispatchers.IO) {
+        val expense = Expense(
+            userId = userId,
+            categoryId = categoryId,
+            name = name,
+            amount = amount,
+            dateIso = date.toString(),
+            receiptUri = receiptUri
+        )
+        val id = database.insertExpense(expense)
+        if (id == -1L) {
+            throw IllegalStateException("Unable to persist expense")
+        }
+        expense.copy(id = id)
+    }
+
+    suspend fun updateExpense(expense: Expense): Boolean = withContext(Dispatchers.IO) {
+        val existing = database.getExpense(expense.id, expense.userId) ?: return@withContext false
+        database.updateExpense(expense, existing.amount, existing.categoryId)
+    }
+
+    suspend fun deleteExpense(expenseId: Long, userId: Long): Boolean = withContext(Dispatchers.IO) {
+        database.deleteExpense(expenseId, userId)
     }
 
     suspend fun registerUser(username: String, password: String): Result<Long> = withContext(Dispatchers.IO) {

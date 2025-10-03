@@ -1,36 +1,49 @@
 <resources>
-    <string name="app_name">Oinkonomics</string>
-
-
-    <!-- MENU BUTTONS -->
-    <string name="title_home">Home</string>
-    <string name="title_piggybanks">Piggy Banks</string>
-    <string name="title_debttracker">Debt Tracker</string>
-    <string name="title_subscriptions">Subscriptions</string>
-    <string name="title_more">More</string>
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
-
-    <string name="edit_category_title">Edit Category</string>
-    <string name="save">Save</string>
-    <string name="cancel">Cancel</string>
-    <string name="remove_category">Remove Category</string>
-    <string name="remove_category_confirmation">Are you sure you want to remove this category?</string>
-    <string name="remove">Remove</string>
-    <string name="invalid_category_inputs">Please provide a name and numeric amounts.</string>
-
-    <string name="login_title">Welcome back</string>
-    <string name="register_title">Create your account</string>
-    <string name="hint_username">Email</string>
-    <string name="hint_password">Password</string>
-    <string name="hint_confirm_password">Confirm password</string>
-    <string name="login">Log in</string>
-    <string name="register">Register</string>
-    <string name="action_go_to_register">Need an account? Register</string>
-    <string name="action_go_to_login">Already have an account? Log in</string>
-    <string name="auth_error_missing_fields">Please fill in all fields.</string>
-    <string name="auth_error_password_mismatch">Passwords do not match.</string>
-    <string name="auth_error_login_failed">Incorrect username or password.</string>
-    <string name="auth_error_username_taken">That username is already registered.</string>
-    <string name="auth_success_registered">Account created! You are now signed in.</string>
+  <string name="app_name">Oinkonomics</string>
+  <!-- MENU BUTTONS -->
+  <string name="title_home">Home</string>
+  <string name="title_piggybanks">Piggy Banks</string>
+  <string name="title_debttracker">Debt Tracker</string>
+  <string name="title_subscriptions">Subscriptions</string>
+  <string name="title_more">More</string>
+  <!-- PLACEHOLDERS -->
+  <string name="hello_blank_fragment">Hello blank fragment</string>
+  <!-- DASHBOARD -->
+  <string name="edit_category_title">Edit Category</string>
+  <string name="save">Save</string>
+  <string name="cancel">Cancel</string>
+  <string name="remove_category">Remove Category</string>
+  <string name="remove_category_confirmation">Are you sure you want to remove this category?</string>
+  <string name="remove">Remove</string>
+  <string name="invalid_category_inputs">Please provide a name and numeric amounts.</string>
+  <!-- AUTH -->
+  <string name="login_title">Welcome back</string>
+  <string name="register_title">Create your account</string>
+  <string name="hint_username">Email</string>
+  <string name="hint_password">Password</string>
+  <string name="hint_confirm_password">Confirm password</string>
+  <string name="login">Log in</string>
+  <string name="register">Register</string>
+  <string name="action_go_to_register">Need an account? Register</string>
+  <string name="action_go_to_login">Already have an account? Log in</string>
+  <string name="auth_error_missing_fields">Please fill in all fields.</string>
+  <string name="auth_error_password_mismatch">Passwords do not match.</string>
+  <string name="auth_error_login_failed">Incorrect username or password.</string>
+  <string name="auth_error_username_taken">That username is already registered.</string>
+  <string name="auth_success_registered">Account created! You are now signed in.</string>
+  <!-- HOME -->
+  <string name="home_total_spent_value">%1$s / %2$s</string>
+  <string name="home_total_left_value">%1$s left</string>
+  <string name="home_this_month_label">This Month</string>
+  <string name="home_unknown_category">Unknown category</string>
+  <string name="home_no_categories_warning">Create a budget category on the dashboard before adding expenses.</string>
+  <string name="home_add_expense_title">New Expense</string>
+  <string name="home_edit_expense_title">Edit Expense</string>
+  <string name="home_dialog_confirm">Confirm</string>
+  <string name="home_dialog_delete">Delete</string>
+  <string name="home_invalid_expense_inputs">Please enter a name and a positive amount.</string>
+  <string name="home_delete_expense_title">Remove Expense</string>
+  <string name="home_delete_expense_message">Are you sure you want to delete this expense?</string>
+  <string name="home_total_spent_label">Total Budget Spent</string>
 </resources>
+

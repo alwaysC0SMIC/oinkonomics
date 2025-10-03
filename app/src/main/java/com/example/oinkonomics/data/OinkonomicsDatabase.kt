@@ -41,10 +41,28 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
             )
             """.trimIndent()
         )
+
+        db.execSQL(
+            """
+            CREATE TABLE $TABLE_EXPENSES (
+                $COLUMN_EXPENSE_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                $COLUMN_EXPENSE_USER_ID INTEGER NOT NULL,
+                $COLUMN_EXPENSE_CATEGORY_ID INTEGER NOT NULL,
+                $COLUMN_EXPENSE_NAME TEXT NOT NULL,
+                $COLUMN_EXPENSE_AMOUNT REAL NOT NULL,
+                $COLUMN_EXPENSE_DATE TEXT NOT NULL,
+                $COLUMN_EXPENSE_RECEIPT_URI TEXT,
+                $COLUMN_EXPENSE_CREATED_AT INTEGER NOT NULL,
+                FOREIGN KEY ($COLUMN_EXPENSE_USER_ID) REFERENCES $TABLE_USERS($COLUMN_USER_ID) ON DELETE CASCADE,
+                FOREIGN KEY ($COLUMN_EXPENSE_CATEGORY_ID) REFERENCES $TABLE_BUDGET_CATEGORIES($COLUMN_CATEGORY_ID) ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion != newVersion) {
+            db.execSQL("DROP TABLE IF EXISTS $TABLE_EXPENSES")
             db.execSQL("DROP TABLE IF EXISTS $TABLE_BUDGET_CATEGORIES")
             db.execSQL("DROP TABLE IF EXISTS $TABLE_USERS")
             onCreate(db)
@@ -116,6 +134,118 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
         return categories
     }
 
+    fun insertExpense(expense: Expense): Long {
+        val db = writableDatabase
+        db.beginTransaction()
+        return try {
+            val values = ContentValues().apply {
+                put(COLUMN_EXPENSE_USER_ID, expense.userId)
+                put(COLUMN_EXPENSE_CATEGORY_ID, expense.categoryId)
+                put(COLUMN_EXPENSE_NAME, expense.name)
+                put(COLUMN_EXPENSE_AMOUNT, expense.amount)
+                put(COLUMN_EXPENSE_DATE, expense.dateIso)
+                put(COLUMN_EXPENSE_RECEIPT_URI, expense.receiptUri)
+                put(COLUMN_EXPENSE_CREATED_AT, expense.createdAtEpochMillis)
+            }
+            val id = db.insert(TABLE_EXPENSES, null, values)
+            if (id != -1L) {
+                adjustCategorySpent(db, expense.categoryId, expense.amount)
+            }
+            db.setTransactionSuccessful()
+            id
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    fun updateExpense(expense: Expense, originalAmount: Double, originalCategoryId: Long): Boolean {
+        val db = writableDatabase
+        db.beginTransaction()
+        return try {
+            val values = ContentValues().apply {
+                put(COLUMN_EXPENSE_CATEGORY_ID, expense.categoryId)
+                put(COLUMN_EXPENSE_NAME, expense.name)
+                put(COLUMN_EXPENSE_AMOUNT, expense.amount)
+                put(COLUMN_EXPENSE_DATE, expense.dateIso)
+                put(COLUMN_EXPENSE_RECEIPT_URI, expense.receiptUri)
+            }
+            val updatedRows = db.update(
+                TABLE_EXPENSES,
+                values,
+                "$COLUMN_EXPENSE_ID = ? AND $COLUMN_EXPENSE_USER_ID = ?",
+                arrayOf(expense.id.toString(), expense.userId.toString())
+            )
+            if (updatedRows > 0) {
+                if (originalCategoryId != expense.categoryId) {
+                    adjustCategorySpent(db, originalCategoryId, -originalAmount)
+                    adjustCategorySpent(db, expense.categoryId, expense.amount)
+                } else {
+                    adjustCategorySpent(db, expense.categoryId, expense.amount - originalAmount)
+                }
+            }
+            db.setTransactionSuccessful()
+            updatedRows > 0
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    fun deleteExpense(expenseId: Long, userId: Long): Boolean {
+        val db = writableDatabase
+        db.beginTransaction()
+        return try {
+            val existing = getExpenseInternal(db, expenseId, userId)
+            if (existing == null) {
+                db.setTransactionSuccessful()
+                return false
+            }
+            val deletedRows = db.delete(
+                TABLE_EXPENSES,
+                "$COLUMN_EXPENSE_ID = ? AND $COLUMN_EXPENSE_USER_ID = ?",
+                arrayOf(expenseId.toString(), userId.toString())
+            )
+            if (deletedRows > 0) {
+                adjustCategorySpent(db, existing.categoryId, -existing.amount)
+            }
+            db.setTransactionSuccessful()
+            deletedRows > 0
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    fun getExpenses(userId: Long): List<Expense> {
+        val expenses = mutableListOf<Expense>()
+        val cursor = readableDatabase.query(
+            TABLE_EXPENSES,
+            arrayOf(
+                COLUMN_EXPENSE_ID,
+                COLUMN_EXPENSE_USER_ID,
+                COLUMN_EXPENSE_CATEGORY_ID,
+                COLUMN_EXPENSE_NAME,
+                COLUMN_EXPENSE_AMOUNT,
+                COLUMN_EXPENSE_DATE,
+                COLUMN_EXPENSE_RECEIPT_URI,
+                COLUMN_EXPENSE_CREATED_AT
+            ),
+            "$COLUMN_EXPENSE_USER_ID = ?",
+            arrayOf(userId.toString()),
+            null,
+            null,
+            "$COLUMN_EXPENSE_DATE DESC, $COLUMN_EXPENSE_CREATED_AT DESC"
+        )
+        cursor.use {
+            while (it.moveToNext()) {
+                expenses.add(it.toExpense())
+            }
+        }
+        return expenses
+    }
+
+    fun getExpense(expenseId: Long, userId: Long): Expense? {
+        return getExpenseInternal(readableDatabase, expenseId, userId)
+    }
+
     fun insertUser(username: String, hashedPassword: String): Long {
         val values = ContentValues().apply {
             put(COLUMN_USER_NAME, username)
@@ -154,9 +284,60 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
         }
     }
 
+    private fun Cursor.toExpense(): Expense {
+        return Expense(
+            id = getLong(getColumnIndexOrThrow(COLUMN_EXPENSE_ID)),
+            userId = getLong(getColumnIndexOrThrow(COLUMN_EXPENSE_USER_ID)),
+            categoryId = getLong(getColumnIndexOrThrow(COLUMN_EXPENSE_CATEGORY_ID)),
+            name = getString(getColumnIndexOrThrow(COLUMN_EXPENSE_NAME)),
+            amount = getDouble(getColumnIndexOrThrow(COLUMN_EXPENSE_AMOUNT)),
+            dateIso = getString(getColumnIndexOrThrow(COLUMN_EXPENSE_DATE)),
+            receiptUri = getString(getColumnIndexOrThrow(COLUMN_EXPENSE_RECEIPT_URI)),
+            createdAtEpochMillis = getLong(getColumnIndexOrThrow(COLUMN_EXPENSE_CREATED_AT))
+        )
+    }
+
+    private fun getExpenseInternal(db: SQLiteDatabase, expenseId: Long, userId: Long): Expense? {
+        val cursor = db.query(
+            TABLE_EXPENSES,
+            arrayOf(
+                COLUMN_EXPENSE_ID,
+                COLUMN_EXPENSE_USER_ID,
+                COLUMN_EXPENSE_CATEGORY_ID,
+                COLUMN_EXPENSE_NAME,
+                COLUMN_EXPENSE_AMOUNT,
+                COLUMN_EXPENSE_DATE,
+                COLUMN_EXPENSE_RECEIPT_URI,
+                COLUMN_EXPENSE_CREATED_AT
+            ),
+            "$COLUMN_EXPENSE_ID = ? AND $COLUMN_EXPENSE_USER_ID = ?",
+            arrayOf(expenseId.toString(), userId.toString()),
+            null,
+            null,
+            null
+        )
+        cursor.use {
+            return if (it.moveToFirst()) it.toExpense() else null
+        }
+    }
+
+    private fun adjustCategorySpent(db: SQLiteDatabase, categoryId: Long, delta: Double) {
+        db.execSQL(
+            """
+            UPDATE $TABLE_BUDGET_CATEGORIES
+            SET $COLUMN_CATEGORY_SPENT = CASE
+                WHEN $COLUMN_CATEGORY_SPENT + ? < 0 THEN 0
+                ELSE $COLUMN_CATEGORY_SPENT + ?
+            END
+            WHERE $COLUMN_CATEGORY_ID = ?
+            """.trimIndent(),
+            arrayOf(delta, delta, categoryId)
+        )
+    }
+
     companion object {
         private const val DATABASE_NAME = "oinkonomics.db"
-        private const val DATABASE_VERSION = 2
+        private const val DATABASE_VERSION = 3
 
         private const val TABLE_BUDGET_CATEGORIES = "budget_categories"
         private const val COLUMN_CATEGORY_ID = "id"
@@ -164,6 +345,16 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
         private const val COLUMN_CATEGORY_NAME = "name"
         private const val COLUMN_CATEGORY_MAX = "max_amount"
         private const val COLUMN_CATEGORY_SPENT = "spent_amount"
+
+        private const val TABLE_EXPENSES = "expenses"
+        private const val COLUMN_EXPENSE_ID = "id"
+        private const val COLUMN_EXPENSE_USER_ID = "user_id"
+        private const val COLUMN_EXPENSE_CATEGORY_ID = "category_id"
+        private const val COLUMN_EXPENSE_NAME = "name"
+        private const val COLUMN_EXPENSE_AMOUNT = "amount"
+        private const val COLUMN_EXPENSE_DATE = "expense_date"
+        private const val COLUMN_EXPENSE_RECEIPT_URI = "receipt_uri"
+        private const val COLUMN_EXPENSE_CREATED_AT = "created_at"
 
         private const val TABLE_USERS = "users"
         private const val COLUMN_USER_ID = "id"
