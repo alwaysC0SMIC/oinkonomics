@@ -184,7 +184,7 @@ class HomeFragment : Fragment() {
                         amountFormatted = formatCurrency(expense.amount),
                         dateLabel = expense.localDate.format(dayFormatter),
                         categoryName = categoryNames[expense.categoryId]
-                            ?: getString(R.string.home_unknown_category)
+                            ?: getString(R.string.home_category_none_option)
                     )
                 )
             }
@@ -200,10 +200,6 @@ class HomeFragment : Fragment() {
 
     private fun showExpenseDialog(existingExpense: Expense?) {
         val state = viewModel.uiState.value
-        if (state.categories.isEmpty()) {
-            Toast.makeText(requireContext(), R.string.home_no_categories_warning, Toast.LENGTH_LONG).show()
-            return
-        }
 
         val dialogView = layoutInflater.inflate(R.layout.dialog_expense_entry, null)
         val nameInput = dialogView.findViewById<EditText>(R.id.input_expense_name)
@@ -214,7 +210,10 @@ class HomeFragment : Fragment() {
         val attachButton = dialogView.findViewById<View>(R.id.button_attach_receipt)
         val removeReceiptButton = dialogView.findViewById<View>(R.id.button_remove_receipt)
 
-        val categoryOptions = state.categories.map { it.id to it.name }
+        val categoryOptions = mutableListOf<Pair<Long?, String>>().apply {
+            add(null to getString(R.string.home_category_none_option))
+            state.categories.forEach { add(it.id to it.name) }
+        }
         val spinnerAdapter = ArrayAdapter(
             requireContext(),
             android.R.layout.simple_spinner_dropdown_item,
@@ -223,7 +222,7 @@ class HomeFragment : Fragment() {
         categorySpinner.adapter = spinnerAdapter
 
         var selectedDate = existingExpense?.localDate ?: LocalDate.now()
-        var selectedCategoryId = existingExpense?.categoryId ?: categoryOptions.first().first
+        var selectedCategoryId = existingExpense?.categoryId
         var selectedReceiptUri: Uri? = existingExpense?.receiptUri?.takeIf { it.isNotBlank() }?.toUri()
 
         nameInput.setText(existingExpense?.name.orEmpty())

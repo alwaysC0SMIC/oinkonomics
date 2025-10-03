@@ -47,14 +47,14 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
             CREATE TABLE $TABLE_EXPENSES (
                 $COLUMN_EXPENSE_ID INTEGER PRIMARY KEY AUTOINCREMENT,
                 $COLUMN_EXPENSE_USER_ID INTEGER NOT NULL,
-                $COLUMN_EXPENSE_CATEGORY_ID INTEGER NOT NULL,
+                $COLUMN_EXPENSE_CATEGORY_ID INTEGER,
                 $COLUMN_EXPENSE_NAME TEXT NOT NULL,
                 $COLUMN_EXPENSE_AMOUNT REAL NOT NULL,
                 $COLUMN_EXPENSE_DATE TEXT NOT NULL,
                 $COLUMN_EXPENSE_RECEIPT_URI TEXT,
                 $COLUMN_EXPENSE_CREATED_AT INTEGER NOT NULL,
                 FOREIGN KEY ($COLUMN_EXPENSE_USER_ID) REFERENCES $TABLE_USERS($COLUMN_USER_ID) ON DELETE CASCADE,
-                FOREIGN KEY ($COLUMN_EXPENSE_CATEGORY_ID) REFERENCES $TABLE_BUDGET_CATEGORIES($COLUMN_CATEGORY_ID) ON DELETE CASCADE
+                FOREIGN KEY ($COLUMN_EXPENSE_CATEGORY_ID) REFERENCES $TABLE_BUDGET_CATEGORIES($COLUMN_CATEGORY_ID) ON DELETE SET NULL
             )
             """.trimIndent()
         )
@@ -140,7 +140,11 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
         return try {
             val values = ContentValues().apply {
                 put(COLUMN_EXPENSE_USER_ID, expense.userId)
-                put(COLUMN_EXPENSE_CATEGORY_ID, expense.categoryId)
+                if (expense.categoryId != null) {
+                    put(COLUMN_EXPENSE_CATEGORY_ID, expense.categoryId)
+                } else {
+                    putNull(COLUMN_EXPENSE_CATEGORY_ID)
+                }
                 put(COLUMN_EXPENSE_NAME, expense.name)
                 put(COLUMN_EXPENSE_AMOUNT, expense.amount)
                 put(COLUMN_EXPENSE_DATE, expense.dateIso)
@@ -158,12 +162,16 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
         }
     }
 
-    fun updateExpense(expense: Expense, originalAmount: Double, originalCategoryId: Long): Boolean {
+    fun updateExpense(expense: Expense, originalAmount: Double, originalCategoryId: Long?): Boolean {
         val db = writableDatabase
         db.beginTransaction()
         return try {
             val values = ContentValues().apply {
-                put(COLUMN_EXPENSE_CATEGORY_ID, expense.categoryId)
+                if (expense.categoryId != null) {
+                    put(COLUMN_EXPENSE_CATEGORY_ID, expense.categoryId)
+                } else {
+                    putNull(COLUMN_EXPENSE_CATEGORY_ID)
+                }
                 put(COLUMN_EXPENSE_NAME, expense.name)
                 put(COLUMN_EXPENSE_AMOUNT, expense.amount)
                 put(COLUMN_EXPENSE_DATE, expense.dateIso)
@@ -288,13 +296,18 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
         return Expense(
             id = getLong(getColumnIndexOrThrow(COLUMN_EXPENSE_ID)),
             userId = getLong(getColumnIndexOrThrow(COLUMN_EXPENSE_USER_ID)),
-            categoryId = getLong(getColumnIndexOrThrow(COLUMN_EXPENSE_CATEGORY_ID)),
+            categoryId = getNullableLong(COLUMN_EXPENSE_CATEGORY_ID),
             name = getString(getColumnIndexOrThrow(COLUMN_EXPENSE_NAME)),
             amount = getDouble(getColumnIndexOrThrow(COLUMN_EXPENSE_AMOUNT)),
             dateIso = getString(getColumnIndexOrThrow(COLUMN_EXPENSE_DATE)),
             receiptUri = getString(getColumnIndexOrThrow(COLUMN_EXPENSE_RECEIPT_URI)),
             createdAtEpochMillis = getLong(getColumnIndexOrThrow(COLUMN_EXPENSE_CREATED_AT))
         )
+    }
+
+    private fun Cursor.getNullableLong(columnName: String): Long? {
+        val index = getColumnIndexOrThrow(columnName)
+        return if (isNull(index)) null else getLong(index)
     }
 
     private fun getExpenseInternal(db: SQLiteDatabase, expenseId: Long, userId: Long): Expense? {
@@ -321,7 +334,8 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
         }
     }
 
-    private fun adjustCategorySpent(db: SQLiteDatabase, categoryId: Long, delta: Double) {
+    private fun adjustCategorySpent(db: SQLiteDatabase, categoryId: Long?, delta: Double) {
+        if (categoryId == null) return
         db.execSQL(
             """
             UPDATE $TABLE_BUDGET_CATEGORIES
@@ -337,7 +351,7 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
 
     companion object {
         private const val DATABASE_NAME = "oinkonomics.db"
-        private const val DATABASE_VERSION = 3
+        private const val DATABASE_VERSION = 4
 
         private const val TABLE_BUDGET_CATEGORIES = "budget_categories"
         private const val COLUMN_CATEGORY_ID = "id"

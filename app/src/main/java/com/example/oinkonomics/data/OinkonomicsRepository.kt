@@ -40,7 +40,7 @@ class OinkonomicsRepository(context: Context) {
 
     suspend fun createExpense(
         userId: Long,
-        categoryId: Long,
+        categoryId: Long?,
         name: String,
         amount: Double,
         date: LocalDate,

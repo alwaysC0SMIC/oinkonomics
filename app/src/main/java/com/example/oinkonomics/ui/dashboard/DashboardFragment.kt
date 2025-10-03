@@ -37,6 +37,7 @@ class DashboardFragment : Fragment() {
     private lateinit var repository: OinkonomicsRepository
     private lateinit var sessionManager: SessionManager
     private var userId: Long? = null
+    private var uncategorizedSpent: Double = 0.0
 
     private val categoryColors by lazy {
         listOf(
@@ -261,6 +262,8 @@ class DashboardFragment : Fragment() {
         val currentUserId = userId ?: return
         viewLifecycleOwner.lifecycleScope.launch {
             val categories = repository.getBudgetCategories(currentUserId).toMutableList()
+            val expenses = repository.getExpenses(currentUserId)
+            uncategorizedSpent = expenses.filter { it.categoryId == null }.sumOf { it.amount }
             if (categories.isEmpty()) {
                 val defaultCategory = repository.createBudgetCategory(
                     currentUserId,
@@ -277,7 +280,7 @@ class DashboardFragment : Fragment() {
     }
 
     private fun updateTotalProgress() {
-        var totalSpent = 0.0
+        var totalSpent = uncategorizedSpent
         var totalMax = 0.0
         for (category in budgetCategories) {
             totalSpent += category.spentAmount
