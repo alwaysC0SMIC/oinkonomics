@@ -1,364 +1,127 @@
 package com.example.oinkonomics.data
 
-import android.content.ContentValues
 import android.content.Context
-import android.database.Cursor
-import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteOpenHelper
+import androidx.room.Dao
+import androidx.room.Database
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.room.Transaction
+import androidx.room.Update
+import kotlin.math.abs
 
-class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
-    context,
-    DATABASE_NAME,
-    null,
-    DATABASE_VERSION
-) {
+@Dao
+interface OinkonomicsDao {
 
-    override fun onConfigure(db: SQLiteDatabase) {
-        super.onConfigure(db)
-        db.setForeignKeyConstraintsEnabled(true)
-    }
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertCategory(category: BudgetCategory): Long
 
-    override fun onCreate(db: SQLiteDatabase) {
-        db.execSQL(
-            """
-            CREATE TABLE $TABLE_USERS (
-                $COLUMN_USER_ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                $COLUMN_USER_NAME TEXT NOT NULL UNIQUE,
-                $COLUMN_USER_PASSWORD TEXT NOT NULL
-            )
-            """.trimIndent()
-        )
+    @Update
+    suspend fun updateCategory(category: BudgetCategory): Int
 
-        db.execSQL(
-            """
-            CREATE TABLE $TABLE_BUDGET_CATEGORIES (
-                $COLUMN_CATEGORY_ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                $COLUMN_CATEGORY_USER_ID INTEGER NOT NULL,
-                $COLUMN_CATEGORY_NAME TEXT NOT NULL,
-                $COLUMN_CATEGORY_MAX REAL NOT NULL,
-                $COLUMN_CATEGORY_SPENT REAL NOT NULL DEFAULT 0,
-                FOREIGN KEY ($COLUMN_CATEGORY_USER_ID) REFERENCES $TABLE_USERS($COLUMN_USER_ID) ON DELETE CASCADE
-            )
-            """.trimIndent()
-        )
+    @Query("DELETE FROM budget_categories WHERE id = :categoryId AND user_id = :userId")
+    suspend fun deleteCategory(categoryId: Long, userId: Long): Int
 
-        db.execSQL(
-            """
-            CREATE TABLE $TABLE_EXPENSES (
-                $COLUMN_EXPENSE_ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                $COLUMN_EXPENSE_USER_ID INTEGER NOT NULL,
-                $COLUMN_EXPENSE_CATEGORY_ID INTEGER NOT NULL,
-                $COLUMN_EXPENSE_NAME TEXT NOT NULL,
-                $COLUMN_EXPENSE_AMOUNT REAL NOT NULL,
-                $COLUMN_EXPENSE_DATE TEXT NOT NULL,
-                $COLUMN_EXPENSE_RECEIPT_URI TEXT,
-                $COLUMN_EXPENSE_CREATED_AT INTEGER NOT NULL,
-                FOREIGN KEY ($COLUMN_EXPENSE_USER_ID) REFERENCES $TABLE_USERS($COLUMN_USER_ID) ON DELETE CASCADE,
-                FOREIGN KEY ($COLUMN_EXPENSE_CATEGORY_ID) REFERENCES $TABLE_BUDGET_CATEGORIES($COLUMN_CATEGORY_ID) ON DELETE CASCADE
-            )
-            """.trimIndent()
-        )
-    }
+    @Query("SELECT * FROM budget_categories WHERE user_id = :userId ORDER BY id ASC")
+    suspend fun getCategories(userId: Long): List<BudgetCategory>
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        if (oldVersion != newVersion) {
-            db.execSQL("DROP TABLE IF EXISTS $TABLE_EXPENSES")
-            db.execSQL("DROP TABLE IF EXISTS $TABLE_BUDGET_CATEGORIES")
-            db.execSQL("DROP TABLE IF EXISTS $TABLE_USERS")
-            onCreate(db)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertExpenseRaw(expense: Expense): Long
+
+    @Update
+    suspend fun updateExpenseRaw(expense: Expense): Int
+
+    @Query("DELETE FROM expenses WHERE id = :expenseId AND user_id = :userId")
+    suspend fun deleteExpenseRaw(expenseId: Long, userId: Long): Int
+
+    @Query("SELECT * FROM expenses WHERE user_id = :userId ORDER BY date_iso DESC, created_at DESC")
+    suspend fun getExpenses(userId: Long): List<Expense>
+
+    @Query("SELECT * FROM expenses WHERE id = :expenseId AND user_id = :userId LIMIT 1")
+    suspend fun getExpense(expenseId: Long, userId: Long): Expense?
+
+    @Query("UPDATE budget_categories SET spent_amount = spent_amount + :delta WHERE id = :categoryId")
+    suspend fun adjustCategorySpent(categoryId: Long, delta: Double)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertUser(user: User): Long
+
+    @Query("SELECT COUNT(*) FROM users WHERE username = :username")
+    suspend fun countUsersWithUsername(username: String): Int
+
+    @Query("SELECT id FROM users WHERE username = :username AND password_hash = :passwordHash LIMIT 1")
+    suspend fun getUserIdIfValid(username: String, passwordHash: String): Long?
+
+    @Transaction
+    suspend fun insertExpense(expense: Expense): Long {
+        val id = insertExpenseRaw(expense)
+        if (id != -1L) {
+            adjustCategorySpent(expense.categoryId, expense.amount)
         }
+        return id
     }
 
-    fun insertCategory(category: BudgetCategory): Long {
-        val values = ContentValues().apply {
-            put(COLUMN_CATEGORY_USER_ID, category.userId)
-            put(COLUMN_CATEGORY_NAME, category.name)
-            put(COLUMN_CATEGORY_MAX, category.maxAmount)
-            put(COLUMN_CATEGORY_SPENT, category.spentAmount)
+    @Transaction
+    suspend fun updateExpense(
+        expense: Expense,
+        originalAmount: Double,
+        originalCategoryId: Long
+    ): Boolean {
+        val updatedRows = updateExpenseRaw(expense)
+        if (updatedRows == 0) {
+            return false
         }
-        return writableDatabase.insert(TABLE_BUDGET_CATEGORIES, null, values)
-    }
-
-    fun updateCategory(category: BudgetCategory): Int {
-        val values = ContentValues().apply {
-            put(COLUMN_CATEGORY_NAME, category.name)
-            put(COLUMN_CATEGORY_MAX, category.maxAmount)
-            put(COLUMN_CATEGORY_SPENT, category.spentAmount)
-        }
-        return writableDatabase.update(
-            TABLE_BUDGET_CATEGORIES,
-            values,
-            "$COLUMN_CATEGORY_ID = ? AND $COLUMN_CATEGORY_USER_ID = ?",
-            arrayOf(category.id.toString(), category.userId.toString())
-        )
-    }
-
-    fun deleteCategory(categoryId: Long, userId: Long): Int {
-        return writableDatabase.delete(
-            TABLE_BUDGET_CATEGORIES,
-            "$COLUMN_CATEGORY_ID = ? AND $COLUMN_CATEGORY_USER_ID = ?",
-            arrayOf(categoryId.toString(), userId.toString())
-        )
-    }
-
-    fun getCategories(userId: Long): List<BudgetCategory> {
-        val categories = mutableListOf<BudgetCategory>()
-        val cursor: Cursor = readableDatabase.query(
-            TABLE_BUDGET_CATEGORIES,
-            arrayOf(
-                COLUMN_CATEGORY_ID,
-                COLUMN_CATEGORY_USER_ID,
-                COLUMN_CATEGORY_NAME,
-                COLUMN_CATEGORY_MAX,
-                COLUMN_CATEGORY_SPENT
-            ),
-            "$COLUMN_CATEGORY_USER_ID = ?",
-            arrayOf(userId.toString()),
-            null,
-            null,
-            "$COLUMN_CATEGORY_ID ASC"
-        )
-        cursor.use {
-            while (it.moveToNext()) {
-                categories.add(
-                    BudgetCategory(
-                        id = it.getLong(it.getColumnIndexOrThrow(COLUMN_CATEGORY_ID)),
-                        userId = it.getLong(it.getColumnIndexOrThrow(COLUMN_CATEGORY_USER_ID)),
-                        name = it.getString(it.getColumnIndexOrThrow(COLUMN_CATEGORY_NAME)),
-                        maxAmount = it.getDouble(it.getColumnIndexOrThrow(COLUMN_CATEGORY_MAX)),
-                        spentAmount = it.getDouble(it.getColumnIndexOrThrow(COLUMN_CATEGORY_SPENT))
-                    )
-                )
+        if (expense.categoryId != originalCategoryId) {
+            adjustCategorySpent(originalCategoryId, -originalAmount)
+            adjustCategorySpent(expense.categoryId, expense.amount)
+        } else {
+            val delta = expense.amount - originalAmount
+            if (abs(delta) > 0.000_001) {
+                adjustCategorySpent(expense.categoryId, delta)
             }
         }
-        return categories
+        return true
     }
 
-    fun insertExpense(expense: Expense): Long {
-        val db = writableDatabase
-        db.beginTransaction()
-        return try {
-            val values = ContentValues().apply {
-                put(COLUMN_EXPENSE_USER_ID, expense.userId)
-                put(COLUMN_EXPENSE_CATEGORY_ID, expense.categoryId)
-                put(COLUMN_EXPENSE_NAME, expense.name)
-                put(COLUMN_EXPENSE_AMOUNT, expense.amount)
-                put(COLUMN_EXPENSE_DATE, expense.dateIso)
-                put(COLUMN_EXPENSE_RECEIPT_URI, expense.receiptUri)
-                put(COLUMN_EXPENSE_CREATED_AT, expense.createdAtEpochMillis)
-            }
-            val id = db.insert(TABLE_EXPENSES, null, values)
-            if (id != -1L) {
-                adjustCategorySpent(db, expense.categoryId, expense.amount)
-            }
-            db.setTransactionSuccessful()
-            id
-        } finally {
-            db.endTransaction()
+    @Transaction
+    suspend fun deleteExpense(expenseId: Long, userId: Long): Boolean {
+        val existing = getExpense(expenseId, userId) ?: return false
+        val deleted = deleteExpenseRaw(expenseId, userId)
+        if (deleted == 0) {
+            return false
         }
+        adjustCategorySpent(existing.categoryId, -existing.amount)
+        return true
     }
 
-    fun updateExpense(expense: Expense, originalAmount: Double, originalCategoryId: Long): Boolean {
-        val db = writableDatabase
-        db.beginTransaction()
-        return try {
-            val values = ContentValues().apply {
-                put(COLUMN_EXPENSE_CATEGORY_ID, expense.categoryId)
-                put(COLUMN_EXPENSE_NAME, expense.name)
-                put(COLUMN_EXPENSE_AMOUNT, expense.amount)
-                put(COLUMN_EXPENSE_DATE, expense.dateIso)
-                put(COLUMN_EXPENSE_RECEIPT_URI, expense.receiptUri)
-            }
-            val updatedRows = db.update(
-                TABLE_EXPENSES,
-                values,
-                "$COLUMN_EXPENSE_ID = ? AND $COLUMN_EXPENSE_USER_ID = ?",
-                arrayOf(expense.id.toString(), expense.userId.toString())
-            )
-            if (updatedRows > 0) {
-                if (originalCategoryId != expense.categoryId) {
-                    adjustCategorySpent(db, originalCategoryId, -originalAmount)
-                    adjustCategorySpent(db, expense.categoryId, expense.amount)
-                } else {
-                    adjustCategorySpent(db, expense.categoryId, expense.amount - originalAmount)
-                }
-            }
-            db.setTransactionSuccessful()
-            updatedRows > 0
-        } finally {
-            db.endTransaction()
-        }
-    }
+    suspend fun userExists(username: String): Boolean = countUsersWithUsername(username) > 0
+}
 
-    fun deleteExpense(expenseId: Long, userId: Long): Boolean {
-        val db = writableDatabase
-        db.beginTransaction()
-        return try {
-            val existing = getExpenseInternal(db, expenseId, userId)
-            if (existing == null) {
-                db.setTransactionSuccessful()
-                return false
-            }
-            val deletedRows = db.delete(
-                TABLE_EXPENSES,
-                "$COLUMN_EXPENSE_ID = ? AND $COLUMN_EXPENSE_USER_ID = ?",
-                arrayOf(expenseId.toString(), userId.toString())
-            )
-            if (deletedRows > 0) {
-                adjustCategorySpent(db, existing.categoryId, -existing.amount)
-            }
-            db.setTransactionSuccessful()
-            deletedRows > 0
-        } finally {
-            db.endTransaction()
-        }
-    }
+@Database(
+    entities = [User::class, BudgetCategory::class, Expense::class],
+    version = 1,
+    exportSchema = false
+)
+abstract class OinkonomicsDatabase : RoomDatabase() {
 
-    fun getExpenses(userId: Long): List<Expense> {
-        val expenses = mutableListOf<Expense>()
-        val cursor = readableDatabase.query(
-            TABLE_EXPENSES,
-            arrayOf(
-                COLUMN_EXPENSE_ID,
-                COLUMN_EXPENSE_USER_ID,
-                COLUMN_EXPENSE_CATEGORY_ID,
-                COLUMN_EXPENSE_NAME,
-                COLUMN_EXPENSE_AMOUNT,
-                COLUMN_EXPENSE_DATE,
-                COLUMN_EXPENSE_RECEIPT_URI,
-                COLUMN_EXPENSE_CREATED_AT
-            ),
-            "$COLUMN_EXPENSE_USER_ID = ?",
-            arrayOf(userId.toString()),
-            null,
-            null,
-            "$COLUMN_EXPENSE_DATE DESC, $COLUMN_EXPENSE_CREATED_AT DESC"
-        )
-        cursor.use {
-            while (it.moveToNext()) {
-                expenses.add(it.toExpense())
-            }
-        }
-        return expenses
-    }
-
-    fun getExpense(expenseId: Long, userId: Long): Expense? {
-        return getExpenseInternal(readableDatabase, expenseId, userId)
-    }
-
-    fun insertUser(username: String, hashedPassword: String): Long {
-        val values = ContentValues().apply {
-            put(COLUMN_USER_NAME, username)
-            put(COLUMN_USER_PASSWORD, hashedPassword)
-        }
-        return writableDatabase.insert(TABLE_USERS, null, values)
-    }
-
-    fun getUserIdIfValid(username: String, hashedPassword: String): Long? {
-        val cursor = readableDatabase.query(
-            TABLE_USERS,
-            arrayOf(COLUMN_USER_ID),
-            "$COLUMN_USER_NAME = ? AND $COLUMN_USER_PASSWORD = ?",
-            arrayOf(username, hashedPassword),
-            null,
-            null,
-            null
-        )
-        cursor.use {
-            return if (it.moveToFirst()) it.getLong(0) else null
-        }
-    }
-
-    fun userExists(username: String): Boolean {
-        val cursor = readableDatabase.query(
-            TABLE_USERS,
-            arrayOf(COLUMN_USER_ID),
-            "$COLUMN_USER_NAME = ?",
-            arrayOf(username),
-            null,
-            null,
-            null
-        )
-        cursor.use {
-            return it.moveToFirst()
-        }
-    }
-
-    private fun Cursor.toExpense(): Expense {
-        return Expense(
-            id = getLong(getColumnIndexOrThrow(COLUMN_EXPENSE_ID)),
-            userId = getLong(getColumnIndexOrThrow(COLUMN_EXPENSE_USER_ID)),
-            categoryId = getLong(getColumnIndexOrThrow(COLUMN_EXPENSE_CATEGORY_ID)),
-            name = getString(getColumnIndexOrThrow(COLUMN_EXPENSE_NAME)),
-            amount = getDouble(getColumnIndexOrThrow(COLUMN_EXPENSE_AMOUNT)),
-            dateIso = getString(getColumnIndexOrThrow(COLUMN_EXPENSE_DATE)),
-            receiptUri = getString(getColumnIndexOrThrow(COLUMN_EXPENSE_RECEIPT_URI)),
-            createdAtEpochMillis = getLong(getColumnIndexOrThrow(COLUMN_EXPENSE_CREATED_AT))
-        )
-    }
-
-    private fun getExpenseInternal(db: SQLiteDatabase, expenseId: Long, userId: Long): Expense? {
-        val cursor = db.query(
-            TABLE_EXPENSES,
-            arrayOf(
-                COLUMN_EXPENSE_ID,
-                COLUMN_EXPENSE_USER_ID,
-                COLUMN_EXPENSE_CATEGORY_ID,
-                COLUMN_EXPENSE_NAME,
-                COLUMN_EXPENSE_AMOUNT,
-                COLUMN_EXPENSE_DATE,
-                COLUMN_EXPENSE_RECEIPT_URI,
-                COLUMN_EXPENSE_CREATED_AT
-            ),
-            "$COLUMN_EXPENSE_ID = ? AND $COLUMN_EXPENSE_USER_ID = ?",
-            arrayOf(expenseId.toString(), userId.toString()),
-            null,
-            null,
-            null
-        )
-        cursor.use {
-            return if (it.moveToFirst()) it.toExpense() else null
-        }
-    }
-
-    private fun adjustCategorySpent(db: SQLiteDatabase, categoryId: Long, delta: Double) {
-        db.execSQL(
-            """
-            UPDATE $TABLE_BUDGET_CATEGORIES
-            SET $COLUMN_CATEGORY_SPENT = CASE
-                WHEN $COLUMN_CATEGORY_SPENT + ? < 0 THEN 0
-                ELSE $COLUMN_CATEGORY_SPENT + ?
-            END
-            WHERE $COLUMN_CATEGORY_ID = ?
-            """.trimIndent(),
-            arrayOf(delta, delta, categoryId)
-        )
-    }
+    abstract fun oinkonomicsDao(): OinkonomicsDao
 
     companion object {
         private const val DATABASE_NAME = "oinkonomics.db"
-        private const val DATABASE_VERSION = 3
 
-        private const val TABLE_BUDGET_CATEGORIES = "budget_categories"
-        private const val COLUMN_CATEGORY_ID = "id"
-        private const val COLUMN_CATEGORY_USER_ID = "user_id"
-        private const val COLUMN_CATEGORY_NAME = "name"
-        private const val COLUMN_CATEGORY_MAX = "max_amount"
-        private const val COLUMN_CATEGORY_SPENT = "spent_amount"
+        @Volatile
+        private var INSTANCE: OinkonomicsDatabase? = null
 
-        private const val TABLE_EXPENSES = "expenses"
-        private const val COLUMN_EXPENSE_ID = "id"
-        private const val COLUMN_EXPENSE_USER_ID = "user_id"
-        private const val COLUMN_EXPENSE_CATEGORY_ID = "category_id"
-        private const val COLUMN_EXPENSE_NAME = "name"
-        private const val COLUMN_EXPENSE_AMOUNT = "amount"
-        private const val COLUMN_EXPENSE_DATE = "expense_date"
-        private const val COLUMN_EXPENSE_RECEIPT_URI = "receipt_uri"
-        private const val COLUMN_EXPENSE_CREATED_AT = "created_at"
-
-        private const val TABLE_USERS = "users"
-        private const val COLUMN_USER_ID = "id"
-        private const val COLUMN_USER_NAME = "username"
-        private const val COLUMN_USER_PASSWORD = "password"
+        fun getInstance(context: Context): OinkonomicsDatabase {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: Room.databaseBuilder(
+                    context.applicationContext,
+                    OinkonomicsDatabase::class.java,
+                    DATABASE_NAME
+                ).build().also { INSTANCE = it }
+            }
+        }
     }
 }
