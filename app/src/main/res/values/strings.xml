@@ -18,4 +18,19 @@
     <string name="remove_category_confirmation">Are you sure you want to remove this category?</string>
     <string name="remove">Remove</string>
     <string name="invalid_category_inputs">Please provide a name and numeric amounts.</string>
+
+    <string name="login_title">Welcome back</string>
+    <string name="register_title">Create your account</string>
+    <string name="hint_username">Email</string>
+    <string name="hint_password">Password</string>
+    <string name="hint_confirm_password">Confirm password</string>
+    <string name="login">Log in</string>
+    <string name="register">Register</string>
+    <string name="action_go_to_register">Need an account? Register</string>
+    <string name="action_go_to_login">Already have an account? Log in</string>
+    <string name="auth_error_missing_fields">Please fill in all fields.</string>
+    <string name="auth_error_password_mismatch">Passwords do not match.</string>
+    <string name="auth_error_login_failed">Incorrect username or password.</string>
+    <string name="auth_error_username_taken">That username is already registered.</string>
+    <string name="auth_success_registered">Account created! You are now signed in.</string>
 </resources>

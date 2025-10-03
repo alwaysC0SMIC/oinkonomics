@@ -1,5 +1,6 @@
 package com.example.oinkonomics.ui.dashboard
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -12,23 +13,26 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.example.oinkonomics.R
-
-data class BudgetCategory(
-    var name: String,
-    var maxAmount: Double,
-    var spentAmount: Double = 0.0,
-    val colorResId: Int
-)
+import com.example.oinkonomics.auth.AuthActivity
+import com.example.oinkonomics.data.BudgetCategory
+import com.example.oinkonomics.data.OinkonomicsRepository
+import com.example.oinkonomics.data.SessionManager
+import kotlinx.coroutines.launch
 
 class DashboardFragment : Fragment() {
 
-    private val budgetCategories = ArrayList<BudgetCategory>()
+    private val budgetCategories = mutableListOf<BudgetCategory>()
     private lateinit var gridLayout: GridLayout
     private lateinit var totalSpentTextView: TextView
     private lateinit var totalLeftTextView: TextView
     private lateinit var totalProgressBar: android.widget.ProgressBar
     private lateinit var addCategoryButton: SquareLinearLayout
+
+    private lateinit var repository: OinkonomicsRepository
+    private lateinit var sessionManager: SessionManager
+    private var userId: Long? = null
 
     private val categoryColors by lazy {
         listOf(
@@ -40,7 +44,16 @@ class DashboardFragment : Fragment() {
             R.color.category_lilac
         )
     }
-    private var nextColorIndex = 0
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        sessionManager = SessionManager(requireContext())
+        userId = sessionManager.getLoggedInUserId()
+        if (userId == null) {
+            startActivity(Intent(requireContext(), AuthActivity::class.java))
+            requireActivity().finish()
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -48,6 +61,8 @@ class DashboardFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         val root = inflater.inflate(R.layout.fragment_dashboard, container, false)
+
+        repository = OinkonomicsRepository(requireContext())
 
         gridLayout = root.findViewById(R.id.categories_grid)
         totalSpentTextView = root.findViewById(R.id.total_spent_text)
@@ -60,9 +75,8 @@ class DashboardFragment : Fragment() {
             false
         ) as SquareLinearLayout
         configureAddButton()
-        gridLayout.addView(addCategoryButton)
 
-        updateTotalProgress()
+        loadCategories()
 
         return root
     }
@@ -72,9 +86,7 @@ class DashboardFragment : Fragment() {
         val ring = addCategoryButton.findViewById<RadialProgressView>(R.id.add_progress_ring)
         ring.setColors(neutralColor)
         ring.setProgress(0f, 1f)
-        addCategoryButton.setOnClickListener {
-            showAddCategoryDialog()
-        }
+        addCategoryButton.setOnClickListener { showAddCategoryDialog() }
     }
 
     private fun showAddCategoryDialog() {
@@ -83,45 +95,57 @@ class DashboardFragment : Fragment() {
         AlertDialog.Builder(requireContext())
             .setTitle("Add New Category")
             .setView(dialogView)
-            .setPositiveButton("Add") { _, _ ->
-                val nameEditText = dialogView.findViewById<EditText>(R.id.edit_text_category_name)
-                val maxAmountEditText = dialogView.findViewById<EditText>(R.id.edit_text_max_amount)
-
-                val name = nameEditText.text.toString().trim()
-                val maxAmount = maxAmountEditText.text.toString().toDoubleOrNull()
-
-                if (name.isNotEmpty() && maxAmount != null) {
-                    addCategory(name, maxAmount)
-                } else {
-                    Toast.makeText(requireContext(), "Please fill all fields", Toast.LENGTH_SHORT).show()
-                }
-            }
+            .setPositiveButton("Add", null)
             .setNegativeButton("Cancel", null)
-            .show()
+            .create()
+            .also { dialog ->
+                dialog.setOnShowListener {
+                    val addButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                    addButton.setOnClickListener {
+                        val nameField = dialogView.findViewById<EditText>(R.id.edit_text_category_name)
+                        val maxAmountField = dialogView.findViewById<EditText>(R.id.edit_text_max_amount)
+
+                        val name = nameField.text.toString().trim()
+                        val maxAmount = maxAmountField.text.toString().toDoubleOrNull()
+
+                        if (name.isEmpty() || maxAmount == null) {
+                            Toast.makeText(requireContext(), "Please fill all fields", Toast.LENGTH_SHORT).show()
+                            return@setOnClickListener
+                        }
+
+                        addCategory(name, maxAmount)
+                        dialog.dismiss()
+                    }
+                }
+                dialog.show()
+            }
     }
 
     private fun addCategory(name: String, maxAmount: Double) {
-        val colorResId = categoryColors[nextColorIndex % categoryColors.size]
-        nextColorIndex++
-
-        val category = BudgetCategory(name, maxAmount, 0.0, colorResId)
-        budgetCategories.add(category)
-
-        val categoryView = layoutInflater.inflate(R.layout.item_budget_category, gridLayout, false)
-        bindCategoryView(categoryView, category)
-
-        val insertIndex = gridLayout.indexOfChild(addCategoryButton)
-        gridLayout.addView(categoryView, insertIndex)
-        updateTotalProgress()
-        ensureAddButtonLast()
+        val currentUserId = userId ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val newCategory = repository.createBudgetCategory(currentUserId, name, maxAmount)
+            budgetCategories.add(newCategory)
+            renderCategories()
+            updateTotalProgress()
+        }
     }
 
-    private fun ensureAddButtonLast() {
-        gridLayout.removeView(addCategoryButton)
+    private fun renderCategories() {
+        if (addCategoryButton.parent != null) {
+            (addCategoryButton.parent as ViewGroup).removeView(addCategoryButton)
+        }
+        gridLayout.removeAllViews()
+        budgetCategories.forEach { category ->
+            val categoryView = layoutInflater.inflate(R.layout.item_budget_category, gridLayout, false)
+            bindCategoryView(categoryView, category)
+            gridLayout.addView(categoryView)
+        }
         gridLayout.addView(addCategoryButton)
     }
 
-    private fun showEditCategoryDialog(category: BudgetCategory, viewIndex: Int) {
+    private fun showEditCategoryDialog(category: BudgetCategory, cardView: View) {
+        val currentUserId = userId ?: return
         val dialogView = layoutInflater.inflate(R.layout.dialog_edit_category, null)
         val nameEditText = dialogView.findViewById<EditText>(R.id.edit_text_category_name)
         val maxAmountEditText = dialogView.findViewById<EditText>(R.id.edit_text_max_amount)
@@ -142,6 +166,12 @@ class DashboardFragment : Fragment() {
         dialog.setOnShowListener {
             val saveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             saveButton.setOnClickListener {
+                val index = budgetCategories.indexOfFirst { it.id == category.id }
+                if (index == -1) {
+                    dialog.dismiss()
+                    return@setOnClickListener
+                }
+
                 val name = nameEditText.text.toString().trim()
                 val maxAmount = maxAmountEditText.text.toString().toDoubleOrNull()
                 val spentAmount = spentAmountEditText.text.toString().toDoubleOrNull()
@@ -151,39 +181,45 @@ class DashboardFragment : Fragment() {
                     return@setOnClickListener
                 }
 
-                category.name = name
-                category.maxAmount = maxAmount
-                category.spentAmount = spentAmount
+                val updatedCategory = budgetCategories[index].copy(
+                    name = name,
+                    maxAmount = maxAmount,
+                    spentAmount = spentAmount
+                )
 
-                val categoryView = gridLayout.getChildAt(viewIndex)
-                bindCategoryView(categoryView, category)
-                updateTotalProgress()
-                dialog.dismiss()
+                viewLifecycleOwner.lifecycleScope.launch {
+                    repository.updateBudgetCategory(updatedCategory)
+                    budgetCategories[index] = updatedCategory
+                    bindCategoryView(cardView, updatedCategory)
+                    updateTotalProgress()
+                    dialog.dismiss()
+                }
             }
         }
 
         removeButton.setOnClickListener {
+            val index = budgetCategories.indexOfFirst { it.id == category.id }
+            if (index == -1) {
+                dialog.dismiss()
+                return@setOnClickListener
+            }
             AlertDialog.Builder(requireContext())
                 .setTitle(R.string.remove_category)
                 .setMessage(R.string.remove_category_confirmation)
                 .setPositiveButton(R.string.remove) { _, _ ->
-                    removeCategory(viewIndex)
-                    dialog.dismiss()
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        repository.deleteBudgetCategory(category.id, currentUserId)
+                        budgetCategories.removeAt(index)
+                        renderCategories()
+                        updateTotalProgress()
+                        dialog.dismiss()
+                    }
                 }
                 .setNegativeButton(R.string.cancel, null)
                 .show()
         }
 
         dialog.show()
-    }
-
-    private fun removeCategory(index: Int) {
-        if (index < 0 || index >= budgetCategories.size) return
-        budgetCategories.removeAt(index)
-        gridLayout.removeViewAt(index)
-        updateTotalProgress()
-        updateAllCategoryViews()
-        ensureAddButtonLast()
     }
 
     private fun bindCategoryView(view: View, category: BudgetCategory) {
@@ -197,22 +233,27 @@ class DashboardFragment : Fragment() {
         val max = if (category.maxAmount <= 0) 1.0 else category.maxAmount
         radialProgressView.setProgress(category.spentAmount.toFloat(), max.toFloat())
 
-        val progressColor = ContextCompat.getColor(requireContext(), category.colorResId)
-        radialProgressView.setColors(progressColor)
+        val index = budgetCategories.indexOfFirst { it.id == category.id }
+        val colorResId = if (index >= 0) {
+            categoryColors[index % categoryColors.size]
+        } else {
+            categoryColors.first()
+        }
+        radialProgressView.setColors(ContextCompat.getColor(requireContext(), colorResId))
 
         view.setOnClickListener {
-            val index = gridLayout.indexOfChild(view)
-            if (index >= 0 && index < budgetCategories.size) {
-                showEditCategoryDialog(budgetCategories[index], index)
-            }
+            showEditCategoryDialog(category, view)
         }
     }
 
-    private fun updateAllCategoryViews() {
-        for (i in 0 until budgetCategories.size) {
-            val category = budgetCategories[i]
-            val categoryView = gridLayout.getChildAt(i)
-            bindCategoryView(categoryView, category)
+    private fun loadCategories() {
+        val currentUserId = userId ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val categories = repository.getBudgetCategories(currentUserId)
+            budgetCategories.clear()
+            budgetCategories.addAll(categories)
+            renderCategories()
+            updateTotalProgress()
         }
     }
 
@@ -228,7 +269,8 @@ class DashboardFragment : Fragment() {
 
         totalSpentTextView.text = "Total Spent"
         totalLeftTextView.text = "R${totalLeft} left"
-        totalProgressBar.max = totalMax.toInt()
-        totalProgressBar.progress = totalSpent.toInt()
+        val maxValue = totalMax.toInt().coerceAtLeast(1)
+        totalProgressBar.max = maxValue
+        totalProgressBar.progress = totalSpent.toInt().coerceIn(0, maxValue)
     }
 }
