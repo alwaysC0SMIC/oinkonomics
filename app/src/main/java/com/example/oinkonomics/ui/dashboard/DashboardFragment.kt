@@ -23,6 +23,10 @@ import kotlinx.coroutines.launch
 
 class DashboardFragment : Fragment() {
 
+    companion object {
+        private const val DEFAULT_GROCERIES_MAX = 5000.0
+    }
+
     private val budgetCategories = mutableListOf<BudgetCategory>()
     private lateinit var gridLayout: GridLayout
     private lateinit var totalSpentTextView: TextView
@@ -256,7 +260,15 @@ class DashboardFragment : Fragment() {
     private fun loadCategories() {
         val currentUserId = userId ?: return
         viewLifecycleOwner.lifecycleScope.launch {
-            val categories = repository.getBudgetCategories(currentUserId)
+            val categories = repository.getBudgetCategories(currentUserId).toMutableList()
+            if (categories.isEmpty()) {
+                val defaultCategory = repository.createBudgetCategory(
+                    currentUserId,
+                    name = getString(R.string.default_category_name),
+                    maxAmount = DEFAULT_GROCERIES_MAX
+                )
+                categories.add(defaultCategory)
+            }
             budgetCategories.clear()
             budgetCategories.addAll(categories)
             renderCategories()
