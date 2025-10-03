@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.oinkonomics.data.BudgetCategory
 import com.example.oinkonomics.data.Expense
+import com.example.oinkonomics.data.MissingUserException
 import com.example.oinkonomics.data.OinkonomicsRepository
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +19,8 @@ data class HomeUiState(
     val categories: List<BudgetCategory> = emptyList(),
     val totalBudget: Double = 0.0,
     val totalSpent: Double = 0.0,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val sessionExpired: Boolean = false
 )
 
 class HomeViewModel(
@@ -36,7 +38,7 @@ class HomeViewModel(
     fun refreshData() {
         if (userId < 0) return
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, sessionExpired = false) }
             try {
                 val categories = repository.getBudgetCategories(userId)
                 val expenses = repository.getExpenses(userId)
@@ -48,11 +50,20 @@ class HomeViewModel(
                     categories = categories,
                     totalBudget = totalBudget,
                     totalSpent = totalSpent,
-                    errorMessage = null
+                    errorMessage = null,
+                    sessionExpired = false
                 )
+            } catch (ex: MissingUserException) {
+                _uiState.update {
+                    it.copy(isLoading = false, errorMessage = ex.message, sessionExpired = true)
+                }
             } catch (ex: Exception) {
                 _uiState.update {
-                    it.copy(isLoading = false, errorMessage = ex.message ?: "Unable to load data")
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = ex.message ?: "Unable to load data",
+                        sessionExpired = false
+                    )
                 }
             }
         }
@@ -70,8 +81,14 @@ class HomeViewModel(
             try {
                 repository.createExpense(userId, categoryId, name, amount, date, receiptUri)
                 refreshData()
+            } catch (ex: MissingUserException) {
+                _uiState.update {
+                    it.copy(errorMessage = ex.message, sessionExpired = true)
+                }
             } catch (ex: Exception) {
-                _uiState.update { it.copy(errorMessage = ex.message ?: "Unable to add expense") }
+                _uiState.update {
+                    it.copy(errorMessage = ex.message ?: "Unable to add expense", sessionExpired = false)
+                }
             }
         }
     }
@@ -105,8 +122,14 @@ class HomeViewModel(
                 } else {
                     _uiState.update { it.copy(errorMessage = "Unable to update expense") }
                 }
+            } catch (ex: MissingUserException) {
+                _uiState.update {
+                    it.copy(errorMessage = ex.message, sessionExpired = true)
+                }
             } catch (ex: Exception) {
-                _uiState.update { it.copy(errorMessage = ex.message ?: "Unable to update expense") }
+                _uiState.update {
+                    it.copy(errorMessage = ex.message ?: "Unable to update expense", sessionExpired = false)
+                }
             }
         }
     }
@@ -121,10 +144,20 @@ class HomeViewModel(
                 } else {
                     _uiState.update { it.copy(errorMessage = "Unable to remove expense") }
                 }
+            } catch (ex: MissingUserException) {
+                _uiState.update {
+                    it.copy(errorMessage = ex.message, sessionExpired = true)
+                }
             } catch (ex: Exception) {
-                _uiState.update { it.copy(errorMessage = ex.message ?: "Unable to remove expense") }
+                _uiState.update {
+                    it.copy(errorMessage = ex.message ?: "Unable to remove expense", sessionExpired = false)
+                }
             }
         }
+    }
+
+    fun onSessionInvalidHandled() {
+        _uiState.update { it.copy(sessionExpired = false, errorMessage = null) }
     }
 
     class Factory(

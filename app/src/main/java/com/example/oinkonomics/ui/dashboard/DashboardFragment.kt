@@ -17,6 +17,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.oinkonomics.R
 import com.example.oinkonomics.auth.AuthActivity
 import com.example.oinkonomics.data.BudgetCategory
+import com.example.oinkonomics.data.MissingUserException
 import com.example.oinkonomics.data.OinkonomicsRepository
 import com.example.oinkonomics.data.SessionManager
 import kotlinx.coroutines.launch
@@ -136,10 +137,20 @@ class DashboardFragment : Fragment() {
     private fun addCategory(name: String, maxAmount: Double) {
         val currentUserId = userId ?: return
         viewLifecycleOwner.lifecycleScope.launch {
-            val newCategory = repository.createBudgetCategory(currentUserId, name, maxAmount)
-            budgetCategories.add(newCategory)
-            renderCategories()
-            updateTotalProgress()
+            try {
+                val newCategory = repository.createBudgetCategory(currentUserId, name, maxAmount)
+                budgetCategories.add(newCategory)
+                renderCategories()
+                updateTotalProgress()
+            } catch (ex: MissingUserException) {
+                handleSessionExpired(ex.message)
+            } catch (ex: Exception) {
+                Toast.makeText(
+                    requireContext(),
+                    ex.message ?: getString(R.string.invalid_category_inputs),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
     }
 
@@ -200,11 +211,21 @@ class DashboardFragment : Fragment() {
                 )
 
                 viewLifecycleOwner.lifecycleScope.launch {
-                    repository.updateBudgetCategory(updatedCategory)
-                    budgetCategories[index] = updatedCategory
-                    bindCategoryView(cardView, updatedCategory)
-                    updateTotalProgress()
-                    dialog.dismiss()
+                    try {
+                        repository.updateBudgetCategory(updatedCategory)
+                        budgetCategories[index] = updatedCategory
+                        bindCategoryView(cardView, updatedCategory)
+                        updateTotalProgress()
+                        dialog.dismiss()
+                    } catch (ex: MissingUserException) {
+                        handleSessionExpired(ex.message)
+                    } catch (ex: Exception) {
+                        Toast.makeText(
+                            requireContext(),
+                            ex.message ?: getString(R.string.invalid_category_inputs),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             }
         }
@@ -220,11 +241,21 @@ class DashboardFragment : Fragment() {
                 .setMessage(R.string.remove_category_confirmation)
                 .setPositiveButton(R.string.remove) { _, _ ->
                     viewLifecycleOwner.lifecycleScope.launch {
-                        repository.deleteBudgetCategory(category.id, currentUserId)
-                        budgetCategories.removeAt(index)
-                        renderCategories()
-                        updateTotalProgress()
-                        dialog.dismiss()
+                        try {
+                            repository.deleteBudgetCategory(category.id, currentUserId)
+                            budgetCategories.removeAt(index)
+                            renderCategories()
+                            updateTotalProgress()
+                            dialog.dismiss()
+                        } catch (ex: MissingUserException) {
+                            handleSessionExpired(ex.message)
+                        } catch (ex: Exception) {
+                            Toast.makeText(
+                                requireContext(),
+                                ex.message ?: getString(R.string.invalid_category_inputs),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     }
                 }
                 .setNegativeButton(R.string.cancel, null)
@@ -261,21 +292,31 @@ class DashboardFragment : Fragment() {
     private fun loadCategories() {
         val currentUserId = userId ?: return
         viewLifecycleOwner.lifecycleScope.launch {
-            val categories = repository.getBudgetCategories(currentUserId).toMutableList()
-            val expenses = repository.getExpenses(currentUserId)
-            uncategorizedSpent = expenses.filter { it.categoryId == null }.sumOf { it.amount }
-            if (categories.isEmpty()) {
-                val defaultCategory = repository.createBudgetCategory(
-                    currentUserId,
-                    name = getString(R.string.default_category_name),
-                    maxAmount = DEFAULT_GROCERIES_MAX
-                )
-                categories.add(defaultCategory)
+            try {
+                val categories = repository.getBudgetCategories(currentUserId).toMutableList()
+                val expenses = repository.getExpenses(currentUserId)
+                uncategorizedSpent = expenses.filter { it.categoryId == null }.sumOf { it.amount }
+                if (categories.isEmpty()) {
+                    val defaultCategory = repository.createBudgetCategory(
+                        currentUserId,
+                        name = getString(R.string.default_category_name),
+                        maxAmount = DEFAULT_GROCERIES_MAX
+                    )
+                    categories.add(defaultCategory)
+                }
+                budgetCategories.clear()
+                budgetCategories.addAll(categories)
+                renderCategories()
+                updateTotalProgress()
+            } catch (ex: MissingUserException) {
+                handleSessionExpired(ex.message)
+            } catch (ex: Exception) {
+                Toast.makeText(
+                    requireContext(),
+                    ex.message ?: getString(R.string.invalid_category_inputs),
+                    Toast.LENGTH_SHORT
+                ).show()
             }
-            budgetCategories.clear()
-            budgetCategories.addAll(categories)
-            renderCategories()
-            updateTotalProgress()
         }
     }
 
@@ -294,5 +335,14 @@ class DashboardFragment : Fragment() {
         val maxValue = totalMax.toInt().coerceAtLeast(1)
         totalProgressBar.max = maxValue
         totalProgressBar.progress = totalSpent.toInt().coerceIn(0, maxValue)
+    }
+
+    private fun handleSessionExpired(message: String?) {
+        if (!message.isNullOrBlank()) {
+            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+        }
+        sessionManager.clearSession()
+        startActivity(Intent(requireContext(), AuthActivity::class.java))
+        requireActivity().finish()
     }
 }

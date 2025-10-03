@@ -134,6 +134,13 @@ class HomeFragment : Fragment() {
                     if (state.errorMessage != null) {
                         Toast.makeText(requireContext(), state.errorMessage, Toast.LENGTH_SHORT).show()
                     }
+                    if (state.sessionExpired) {
+                        sessionManager.clearSession()
+                        startActivity(Intent(requireContext(), AuthActivity::class.java))
+                        viewModel.onSessionInvalidHandled()
+                        requireActivity().finish()
+                        return@collect
+                    }
                     updateHeader(state.totalSpent, state.totalBudget)
                     renderExpenses(state.expenses, state.categories)
                 }

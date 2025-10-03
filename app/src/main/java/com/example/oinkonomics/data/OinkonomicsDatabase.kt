@@ -19,19 +19,36 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     override fun onCreate(db: SQLiteDatabase) {
+        createUsersTable(db)
+        createBudgetCategoriesTable(db)
+        createExpensesTable(db)
+    }
+
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion == newVersion) return
+
+        db.execSQL("DROP TABLE IF EXISTS $TABLE_EXPENSES")
+        db.execSQL("DROP TABLE IF EXISTS $TABLE_BUDGET_CATEGORIES")
+        createBudgetCategoriesTable(db)
+        createExpensesTable(db)
+    }
+
+    private fun createUsersTable(db: SQLiteDatabase) {
         db.execSQL(
             """
-            CREATE TABLE $TABLE_USERS (
+            CREATE TABLE IF NOT EXISTS $TABLE_USERS (
                 $COLUMN_USER_ID INTEGER PRIMARY KEY AUTOINCREMENT,
                 $COLUMN_USER_NAME TEXT NOT NULL UNIQUE,
                 $COLUMN_USER_PASSWORD TEXT NOT NULL
             )
             """.trimIndent()
         )
+    }
 
+    private fun createBudgetCategoriesTable(db: SQLiteDatabase) {
         db.execSQL(
             """
-            CREATE TABLE $TABLE_BUDGET_CATEGORIES (
+            CREATE TABLE IF NOT EXISTS $TABLE_BUDGET_CATEGORIES (
                 $COLUMN_CATEGORY_ID INTEGER PRIMARY KEY AUTOINCREMENT,
                 $COLUMN_CATEGORY_USER_ID INTEGER NOT NULL,
                 $COLUMN_CATEGORY_NAME TEXT NOT NULL,
@@ -41,10 +58,12 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
             )
             """.trimIndent()
         )
+    }
 
+    private fun createExpensesTable(db: SQLiteDatabase) {
         db.execSQL(
             """
-            CREATE TABLE $TABLE_EXPENSES (
+            CREATE TABLE IF NOT EXISTS $TABLE_EXPENSES (
                 $COLUMN_EXPENSE_ID INTEGER PRIMARY KEY AUTOINCREMENT,
                 $COLUMN_EXPENSE_USER_ID INTEGER NOT NULL,
                 $COLUMN_EXPENSE_CATEGORY_ID INTEGER,
@@ -58,15 +77,6 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
             )
             """.trimIndent()
         )
-    }
-
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        if (oldVersion != newVersion) {
-            db.execSQL("DROP TABLE IF EXISTS $TABLE_EXPENSES")
-            db.execSQL("DROP TABLE IF EXISTS $TABLE_BUDGET_CATEGORIES")
-            db.execSQL("DROP TABLE IF EXISTS $TABLE_USERS")
-            onCreate(db)
-        }
     }
 
     fun insertCategory(category: BudgetCategory): Long {
@@ -292,6 +302,21 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
         }
     }
 
+    fun userExistsById(userId: Long): Boolean {
+        val cursor = readableDatabase.query(
+            TABLE_USERS,
+            arrayOf(COLUMN_USER_ID),
+            "$COLUMN_USER_ID = ?",
+            arrayOf(userId.toString()),
+            null,
+            null,
+            null
+        )
+        cursor.use {
+            return it.moveToFirst()
+        }
+    }
+
     private fun Cursor.toExpense(): Expense {
         return Expense(
             id = getLong(getColumnIndexOrThrow(COLUMN_EXPENSE_ID)),
@@ -351,7 +376,7 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
 
     companion object {
         private const val DATABASE_NAME = "oinkonomics.db"
-        private const val DATABASE_VERSION = 4
+        private const val DATABASE_VERSION = 5
 
         private const val TABLE_BUDGET_CATEGORIES = "budget_categories"
         private const val COLUMN_CATEGORY_ID = "id"
