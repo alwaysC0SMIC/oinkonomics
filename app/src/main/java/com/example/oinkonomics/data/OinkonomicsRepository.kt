@@ -11,30 +11,43 @@ class OinkonomicsRepository(context: Context) {
     private val database = OinkonomicsDatabase(context.applicationContext)
 
     suspend fun getBudgetCategories(userId: Long): List<BudgetCategory> = withContext(Dispatchers.IO) {
+        ensureUserExists(userId)
         database.getCategories(userId)
     }
 
-    suspend fun createBudgetCategory(userId: Long, name: String, maxAmount: Double, spentAmount: Double = 0.0): BudgetCategory =
-        withContext(Dispatchers.IO) {
-            val category = BudgetCategory(
-                userId = userId,
-                name = name,
-                maxAmount = maxAmount,
-                spentAmount = spentAmount
-            )
-            val id = database.insertCategory(category)
-            category.copy(id = id)
+    suspend fun createBudgetCategory(
+        userId: Long,
+        name: String,
+        maxAmount: Double,
+        spentAmount: Double = 0.0
+    ): BudgetCategory = withContext(Dispatchers.IO) {
+        val category = BudgetCategory(
+            userId = userId,
+            name = name,
+            maxAmount = maxAmount,
+            spentAmount = spentAmount
+        )
+        ensureUserExists(userId)
+        val id = database.insertCategory(category)
+        if (id == -1L) {
+            throw IllegalStateException("Unable to persist budget category")
         }
+        database.getCategory(id, userId)
+            ?: throw IllegalStateException("Unable to load budget category after creation")
+    }
 
     suspend fun updateBudgetCategory(category: BudgetCategory) = withContext(Dispatchers.IO) {
+        ensureUserExists(category.userId)
         database.updateCategory(category)
     }
 
     suspend fun deleteBudgetCategory(categoryId: Long, userId: Long) = withContext(Dispatchers.IO) {
+        ensureUserExists(userId)
         database.deleteCategory(categoryId, userId)
     }
 
     suspend fun getExpenses(userId: Long): List<Expense> = withContext(Dispatchers.IO) {
+        ensureUserExists(userId)
         database.getExpenses(userId)
     }
 
@@ -54,6 +67,7 @@ class OinkonomicsRepository(context: Context) {
             dateIso = date.toString(),
             receiptUri = receiptUri
         )
+        ensureUserExists(userId)
         val id = database.insertExpense(expense)
         if (id == -1L) {
             throw IllegalStateException("Unable to persist expense")
@@ -62,11 +76,13 @@ class OinkonomicsRepository(context: Context) {
     }
 
     suspend fun updateExpense(expense: Expense): Boolean = withContext(Dispatchers.IO) {
+        ensureUserExists(expense.userId)
         val existing = database.getExpense(expense.id, expense.userId) ?: return@withContext false
         database.updateExpense(expense, existing.amount, existing.categoryId)
     }
 
     suspend fun deleteExpense(expenseId: Long, userId: Long): Boolean = withContext(Dispatchers.IO) {
+        ensureUserExists(userId)
         database.deleteExpense(expenseId, userId)
     }
 
@@ -91,5 +107,11 @@ class OinkonomicsRepository(context: Context) {
         val digest = MessageDigest.getInstance("SHA-256")
         val hashBytes = digest.digest(toByteArray())
         return hashBytes.joinToString(separator = "") { byte -> "%02x".format(byte) }
+    }
+
+    private fun ensureUserExists(userId: Long) {
+        if (!database.userExists(userId)) {
+            throw MissingUserException()
+        }
     }
 }

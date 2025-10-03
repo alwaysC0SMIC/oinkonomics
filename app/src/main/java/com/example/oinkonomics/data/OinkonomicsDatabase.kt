@@ -79,6 +79,21 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
         return writableDatabase.insert(TABLE_BUDGET_CATEGORIES, null, values)
     }
 
+    fun userExists(userId: Long): Boolean {
+        val cursor = readableDatabase.query(
+            TABLE_USERS,
+            arrayOf(COLUMN_USER_ID),
+            "$COLUMN_USER_ID = ?",
+            arrayOf(userId.toString()),
+            null,
+            null,
+            null
+        )
+        cursor.use {
+            return it.moveToFirst()
+        }
+    }
+
     fun updateCategory(category: BudgetCategory): Int {
         val values = ContentValues().apply {
             put(COLUMN_CATEGORY_NAME, category.name)
@@ -132,6 +147,36 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
             }
         }
         return categories
+    }
+
+    fun getCategory(categoryId: Long, userId: Long): BudgetCategory? {
+        val cursor = readableDatabase.query(
+            TABLE_BUDGET_CATEGORIES,
+            arrayOf(
+                COLUMN_CATEGORY_ID,
+                COLUMN_CATEGORY_USER_ID,
+                COLUMN_CATEGORY_NAME,
+                COLUMN_CATEGORY_MAX,
+                COLUMN_CATEGORY_SPENT
+            ),
+            "$COLUMN_CATEGORY_ID = ? AND $COLUMN_CATEGORY_USER_ID = ?",
+            arrayOf(categoryId.toString(), userId.toString()),
+            null,
+            null,
+            null
+        )
+        cursor.use {
+            if (it.moveToFirst()) {
+                return BudgetCategory(
+                    id = it.getLong(it.getColumnIndexOrThrow(COLUMN_CATEGORY_ID)),
+                    userId = it.getLong(it.getColumnIndexOrThrow(COLUMN_CATEGORY_USER_ID)),
+                    name = it.getString(it.getColumnIndexOrThrow(COLUMN_CATEGORY_NAME)),
+                    maxAmount = it.getDouble(it.getColumnIndexOrThrow(COLUMN_CATEGORY_MAX)),
+                    spentAmount = it.getDouble(it.getColumnIndexOrThrow(COLUMN_CATEGORY_SPENT))
+                )
+            }
+        }
+        return null
     }
 
     fun insertExpense(expense: Expense): Long {

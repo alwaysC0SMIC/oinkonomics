@@ -17,6 +17,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.oinkonomics.R
 import com.example.oinkonomics.auth.AuthActivity
 import com.example.oinkonomics.data.BudgetCategory
+import com.example.oinkonomics.data.MissingUserException
 import com.example.oinkonomics.data.OinkonomicsRepository
 import com.example.oinkonomics.data.SessionManager
 import kotlinx.coroutines.launch
@@ -131,10 +132,20 @@ class DashboardFragment : Fragment() {
     private fun addCategory(name: String, maxAmount: Double) {
         val currentUserId = userId ?: return
         viewLifecycleOwner.lifecycleScope.launch {
-            val newCategory = repository.createBudgetCategory(currentUserId, name, maxAmount)
-            budgetCategories.add(newCategory)
-            renderCategories()
-            updateTotalProgress()
+            try {
+                val newCategory = repository.createBudgetCategory(currentUserId, name, maxAmount)
+                budgetCategories.add(newCategory)
+                renderCategories()
+                updateTotalProgress()
+            } catch (ex: MissingUserException) {
+                handleExpiredSession()
+            } catch (ex: Exception) {
+                Toast.makeText(
+                    requireContext(),
+                    ex.message ?: getString(R.string.error_saving_category),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
     }
 
@@ -256,12 +267,27 @@ class DashboardFragment : Fragment() {
     private fun loadCategories() {
         val currentUserId = userId ?: return
         viewLifecycleOwner.lifecycleScope.launch {
-            val categories = repository.getBudgetCategories(currentUserId)
-            budgetCategories.clear()
-            budgetCategories.addAll(categories)
-            renderCategories()
-            updateTotalProgress()
+            try {
+                val categories = repository.getBudgetCategories(currentUserId)
+                budgetCategories.clear()
+                budgetCategories.addAll(categories)
+                renderCategories()
+                updateTotalProgress()
+            } catch (ex: MissingUserException) {
+                handleExpiredSession()
+            }
         }
+    }
+
+    private fun handleExpiredSession() {
+        if (!isAdded) {
+            return
+        }
+        sessionManager.clearSession()
+        userId = null
+        Toast.makeText(requireContext(), getString(R.string.error_session_expired), Toast.LENGTH_SHORT).show()
+        startActivity(Intent(requireContext(), AuthActivity::class.java))
+        requireActivity().finish()
     }
 
     private fun updateTotalProgress() {
