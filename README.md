@@ -1,14 +1,14 @@
 # 🐷 Oinkonomics – Smart Budgeting Made Simple
 
 **Oinkonomics** is a modern budgeting app designed to help you take control of your personal finances.  
-Track expenses, organize budgets, and build better financial habits — all in one simple and intuitive interface.
+Track expenses, organize budgets, and build better financial habits, all in one simple and intuitive interface.
 
 ---
 
 ## 🌟 Features
 
 ✅ **Budget Categories**  
-Create and customize categories for your spending — like Groceries, Rent, Transport, and Entertainment.
+Create and customize categories for your spending, like Groceries, Rent, Transport, and Entertainment.
 
 💸 **Expense Management**  
 Record your daily expenses with ease. Assign them to categories and monitor how your spending evolves over time.
@@ -17,7 +17,7 @@ Record your daily expenses with ease. Assign them to categories and monitor how 
 Get a clear snapshot of your spending habits and total expenses for each category.
 
 🧩 **Modular Architecture (Work in Progress)**  
-The app is built with scalability in mind — future modules will include income tracking, visual analytics, and cloud sync.
+The app is built with scalability in mind, future modules will include income tracking, visual analytics, and cloud sync.
 
 ---
 
