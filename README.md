@@ -1,55 +1,80 @@
-🐷 Oinkonomics – Budgeting App
-Oinkonomics is a simple, user-friendly budgeting app designed to help you take control of your personal finances.
-It allows you to create budget categories, track expenses, and manage your money more effectively.
+# 🐷 Oinkonomics – Smart Budgeting Made Simple
 
+**Oinkonomics** is a modern budgeting app designed to help you take control of your personal finances.  
+Track expenses, organize budgets, and build better financial habits — all in one simple and intuitive interface.
 
-✨ Features
-Budget Categories – Organize your finances by creating categories (e.g., Food, Rent, Entertainment).
-Expense Management – Log and track your spending, assign expenses to categories, and monitor your habits.
-Clear Overview – See where your money goes at a glance.
+---
 
-🚀 Getting Started
-Prerequisites
-Android Studio
-Android SDK (configured in local.properties)
-Gradle 8+ (included via wrapper: gradlew / gradlew.bat)
+## 🌟 Features
 
+✅ **Budget Categories**  
+Create and customize categories for your spending — like Groceries, Rent, Transport, and Entertainment.
 
-Setup
-Clone the repository:
+💸 **Expense Management**  
+Record your daily expenses with ease. Assign them to categories and monitor how your spending evolves over time.
 
-git clone https://github.com/yourusername/oinkonomics.git
-cd oinkonomics
+📊 **Financial Overview**  
+Get a clear snapshot of your spending habits and total expenses for each category.
 
-Open the project in Android Studio.
-Let Gradle sync dependencies.
-Build and run the app on an emulator or device.
+🧩 **Modular Architecture (Work in Progress)**  
+The app is built with scalability in mind — future modules will include income tracking, visual analytics, and cloud sync.
 
+---
 
-🛠️ Tech Stack
-Language: Kotlin
-Framework: Android (with AndroidX)
-Build System: Gradle
+## 🧰 Tech Stack
 
+| Component | Technology |
+|------------|-------------|
+| **Language** | Kotlin |
+| **Framework** | Android (AndroidX) |
+| **Build System** | Gradle (Kotlin DSL) |
+| **IDE** | Android Studio |
 
-📂 Project Structure
-app/src/main/java – Application source code
-app/src/main/res – UI layouts, drawables, and resources
-build.gradle.kts – Project build configuration
-gradle.properties – Global Gradle settings
+---
 
-🔮 Roadmap
-Debt Tracking
-Subscription Tracking
-Account Management
+## 🚀 Getting Started
 
-🤝 Contributing
-Contributions are welcome!
-Fork the project
-Create a new branch (feature/awesome-feature)
-Commit your changes
-Push the branch and open a Pull Request
+### Prerequisites
+Before you begin, ensure you have the following installed:
+- [Android Studio](https://developer.android.com/studio)
+- Android SDK (path configured in `local.properties`)
+- Gradle 8+ (included via `gradlew` and `gradlew.bat`)
 
-📜 License
-This project is licensed under the MIT License – see the LICENSE
- file for details.
+### Setup Instructions
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/yourusername/oinkonomics.git
+   cd oinkonomics
+2. **Open in Android Studio**
+Let Gradle sync automatically.
+
+3. **Run the app**
+Choose a device or emulator and click ▶️ Run.
+
+### 🗂️ Project Structure
+Oinkonomics/
+├── app/
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/              # Kotlin source files
+│   │   │   ├── res/               # Layouts, drawables, values
+│   │   │   └── AndroidManifest.xml
+│   ├── build.gradle.kts           # App-level build config
+├── build.gradle.kts               # Project-level build config
+├── gradle.properties              # Gradle settings
+├── settings.gradle.kts            # Module inclusion
+├── local.properties               # Local SDK path (excluded from VCS)
+├── .gitignore                     # Ignored files and directories
+└── gradlew / gradlew.bat          # Gradle wrappers
+
+### 🤝 Contributing
+We welcome contributions! To contribute:
+Fork the repository
+Create a new branch (feature/your-feature-name)
+Commit and push your changes
+Open a Pull Request
+Please follow clean code practices and include brief commit messages.
+
+### 🧾 License
+This project is licensed under the MIT License.
+See the LICENSE file for full details.
