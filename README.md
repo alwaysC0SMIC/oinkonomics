@@ -3,6 +3,8 @@
 **Oinkonomics** is a modern budgeting app designed to help you take control of your personal finances.  
 Track expenses, organize budgets, and build better financial habits, all in one simple and intuitive interface.
 
+[![Watch the showcase]](https://youtu.be/TzuRHKxBow0)
+
 ---
 
 ## 🌟 Features
