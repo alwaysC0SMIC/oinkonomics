@@ -12,6 +12,7 @@ import com.example.oinkonomics.R
 import kotlin.math.max
 import kotlin.math.min
 
+// DRAWS A CUSTOM RADIAL PROGRESS INDICATOR.
 class RadialProgressView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -41,12 +42,14 @@ class RadialProgressView @JvmOverloads constructor(
     }
 
     fun setStrokeWidth(widthPx: Float) {
+        // ADJUSTS HOW THICK THE RING SHOULD BE.
         strokeWidthPx = widthPx
         requestLayout()
         invalidate()
     }
 
     fun setProgress(progress: Float, max: Float) {
+        // UPDATES THE CURRENT FILL FRACTION.
         progressFraction = if (max <= 0f) {
             0f
         } else {
@@ -56,12 +59,14 @@ class RadialProgressView @JvmOverloads constructor(
     }
 
     fun setColors(progressColor: Int) {
+        // APPLIES A BASE COLOR AND DERIVED TRACK COLORS.
         val trackColor = ColorUtils.setAlphaComponent(progressColor, (0.25f * 255).toInt())
         val innerColor = ColorUtils.setAlphaComponent(Color.WHITE, 255)
         setColors(progressColor, trackColor, innerColor)
     }
 
     fun setColors(progressColor: Int, trackColor: Int, innerColor: Int) {
+        // SETS THE EXACT COLORS FOR RING, TRACK, AND CENTER.
         progressPaint.color = progressColor
         trackPaint.color = trackColor
         innerPaint.color = innerColor
@@ -69,6 +74,7 @@ class RadialProgressView @JvmOverloads constructor(
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        // FORCES A SQUARE SIZE BASED ON AVAILABLE SPACE.
         val size = min(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.getSize(heightMeasureSpec))
         val measured = if (size == 0) {
             resources.getDimensionPixelSize(R.dimen.radial_progress_default_size)
@@ -77,12 +83,14 @@ class RadialProgressView @JvmOverloads constructor(
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        // UPDATES BOUNDS WHEN THE VIEW DIMENSIONS CHANGE.
         super.onSizeChanged(w, h, oldw, oldh)
         val inset = strokeWidthPx / 2f
         arcBounds.set(inset, inset, w - inset, h - inset)
     }
 
     override fun onDraw(canvas: Canvas) {
+        // RENDERS THE TRACK, INNER FILL, AND PROGRESS ARC.
         super.onDraw(canvas)
 
         trackPaint.strokeWidth = strokeWidthPx

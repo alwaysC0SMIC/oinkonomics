@@ -13,6 +13,7 @@ import com.example.oinkonomics.data.SessionManager
 import com.example.oinkonomics.databinding.ActivityAuthBinding
 import kotlinx.coroutines.launch
 
+// HANDLES LOGIN AND REGISTRATION WORKFLOWS.
 class AuthActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityAuthBinding
@@ -20,6 +21,7 @@ class AuthActivity : AppCompatActivity() {
     private lateinit var sessionManager: SessionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // PREPARES AUTHENTICATION UI AND SHORT-CIRCUITS IF ALREADY SIGNED IN.
         super.onCreate(savedInstanceState)
 
         binding = ActivityAuthBinding.inflate(layoutInflater)
@@ -38,6 +40,7 @@ class AuthActivity : AppCompatActivity() {
     }
 
     private fun configureListeners() {
+        // WIRES BUTTON INTERACTIONS FOR LOGIN AND REGISTRATION FORMS.
         binding.showRegisterButton.setOnClickListener { showRegisterForm() }
         binding.showLoginButton.setOnClickListener { showLoginForm() }
 
@@ -51,6 +54,7 @@ class AuthActivity : AppCompatActivity() {
             }
 
             lifecycleScope.launch {
+                // ATTEMPTS LOGIN AND STORES SESSION ON SUCCESS.
                 val userId = repository.authenticate(username, password)
                 if (userId != null) {
                     sessionManager.setLoggedInUser(userId)
@@ -81,6 +85,7 @@ class AuthActivity : AppCompatActivity() {
             }
 
             lifecycleScope.launch {
+                // CREATES A NEW ACCOUNT AND OPENS MAIN FLOW ON SUCCESS.
                 val result = repository.registerUser(username, password)
                 result.onSuccess { userId ->
                     sessionManager.setLoggedInUser(userId)
@@ -102,16 +107,19 @@ class AuthActivity : AppCompatActivity() {
     }
 
     private fun launchMain() {
+        // MOVES USERS TO THE PRIMARY APP EXPERIENCE.
         startActivity(Intent(this, MainActivity::class.java))
         finish()
     }
 
     private fun showLoginForm() {
+        // DISPLAYS LOGIN FIELDS AND HIDES REGISTRATION UI.
         binding.loginContainer.visibility = View.VISIBLE
         binding.registerContainer.visibility = View.GONE
     }
 
     private fun showRegisterForm() {
+        // DISPLAYS REGISTRATION FIELDS AND HIDES LOGIN UI.
         binding.loginContainer.visibility = View.GONE
         binding.registerContainer.visibility = View.VISIBLE
     }

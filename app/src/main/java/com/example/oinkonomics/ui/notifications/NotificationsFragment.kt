@@ -9,12 +9,12 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.example.oinkonomics.databinding.FragmentNotificationsBinding
 
+// SHOWS THE NOTIFICATIONS TAB CONTENT.
 class NotificationsFragment : Fragment() {
 
     private var _binding: FragmentNotificationsBinding? = null
 
-    // This property is only valid between onCreateView and
-    // onDestroyView.
+    // THIS PROPERTY IS ONLY VALID BETWEEN ONCREATEVIEW AND ONDESTROYVIEW.
     private val binding get() = _binding!!
 
     override fun onCreateView(
@@ -22,17 +22,19 @@ class NotificationsFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        // INFLATES THE NOTIFICATIONS LAYOUT.
         val notificationsViewModel =
             ViewModelProvider(this).get(NotificationsViewModel::class.java)
 
         _binding = FragmentNotificationsBinding.inflate(inflater, container, false)
         val root: View = binding.root
 
-        // Custom layout implemented - no need for placeholder text
+        // CUSTOM LAYOUT IMPLEMENTED - NO NEED FOR PLACEHOLDER TEXT.
         return root
     }
 
     override fun onDestroyView() {
+        // CLEARS BINDING REFERENCES TO PREVENT LEAKS.
         super.onDestroyView()
         _binding = null
     }
