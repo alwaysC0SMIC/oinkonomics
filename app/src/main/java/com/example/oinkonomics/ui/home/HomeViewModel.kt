@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+// CAPTURES ALL UI STATE NEEDED BY THE HOME SCREEN.
 data class HomeUiState(
     val isLoading: Boolean = true,
     val expenses: List<Expense> = emptyList(),
@@ -23,6 +24,7 @@ data class HomeUiState(
     val sessionExpired: Boolean = false
 )
 
+// COORDINATES HOME SCREEN DATA LOADING AND MUTATIONS.
 class HomeViewModel(
     private val repository: OinkonomicsRepository,
     private val userId: Long
@@ -32,10 +34,12 @@ class HomeViewModel(
     val uiState: StateFlow<HomeUiState> = _uiState
 
     init {
+        // LOADS INITIAL DATA WHEN THE VIEWMODEL IS CREATED.
         refreshData()
     }
 
     fun refreshData() {
+        // PULLS LATEST CATEGORIES AND EXPENSES FROM THE REPOSITORY.
         if (userId < 0) return
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null, sessionExpired = false) }
@@ -76,6 +80,7 @@ class HomeViewModel(
         categoryId: Long?,
         receiptUri: String?
     ) {
+        // CREATES A NEW EXPENSE AND REFRESHES ON SUCCESS.
         if (userId < 0) return
         viewModelScope.launch {
             try {
@@ -101,6 +106,7 @@ class HomeViewModel(
         categoryId: Long?,
         receiptUri: String?
     ) {
+        // UPDATES AN EXISTING EXPENSE AND REFRESHES ON SUCCESS.
         if (userId < 0) return
         viewModelScope.launch {
             try {
@@ -135,6 +141,7 @@ class HomeViewModel(
     }
 
     fun removeExpense(expenseId: Long) {
+        // DELETES AN EXPENSE AND REFRESHES IF THE OPERATION SUCCEEDS.
         if (userId < 0) return
         viewModelScope.launch {
             try {
@@ -157,6 +164,7 @@ class HomeViewModel(
     }
 
     fun onSessionInvalidHandled() {
+        // CLEARS SESSION FLAGS AFTER NAVIGATING AWAY.
         _uiState.update { it.copy(sessionExpired = false, errorMessage = null) }
     }
 
@@ -167,6 +175,7 @@ class HomeViewModel(
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
                 @Suppress("UNCHECKED_CAST")
+                // PROVIDES A HOMEVIEWMODEL INSTANCE WITH PROVIDED DEPENDENCIES.
                 return HomeViewModel(repository, userId) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")

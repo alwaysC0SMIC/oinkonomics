@@ -9,12 +9,12 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.example.oinkonomics.databinding.FragmentDebttrackerBinding
 
+// SHOWS THE DEBT TRACKER SCREEN CONTENT.
 class DebtTrackerFragment : Fragment() {
 
     private var _binding: FragmentDebttrackerBinding? = null
 
-    // This property is only valid between onCreateView and
-    // onDestroyView.
+    // THIS PROPERTY IS ONLY VALID BETWEEN ONCREATEVIEW AND ONDESTROYVIEW.
     private val binding get() = _binding!!
 
     override fun onCreateView(
@@ -22,17 +22,19 @@ class DebtTrackerFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        // INFLATES THE LAYOUT AND PREPARES VIEW BINDING.
         val debtTrackerViewModel =
             ViewModelProvider(this).get(DebtTrackerViewModel::class.java)
 
         _binding = FragmentDebttrackerBinding.inflate(inflater, container, false)
         val root: View = binding.root
 
-        // Custom layout implemented - no need for placeholder text
+        // CUSTOM LAYOUT IMPLEMENTED - NO NEED FOR PLACEHOLDER TEXT.
         return root
     }
 
     override fun onDestroyView() {
+        // CLEARS THE BINDING REFERENCE TO AVOID LEAKS.
         super.onDestroyView()
         _binding = null
     }

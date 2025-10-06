@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.oinkonomics.R
 
+// DEFINES THE DIFFERENT ROW TYPES IN THE HOME LIST.
 sealed class HomeListItem {
     data class MonthHeader(val title: String) : HomeListItem()
     data object AddButton : HomeListItem()
@@ -21,6 +22,7 @@ sealed class HomeListItem {
     ) : HomeListItem()
 }
 
+// RENDERS HOME TAB LIST ITEMS AND HANDLES INTERACTIONS.
 class HomeListAdapter(
     private val onAddExpense: () -> Unit,
     private val onExpenseClicked: (HomeListItem.ExpenseItem) -> Unit
@@ -33,6 +35,7 @@ class HomeListAdapter(
 
         private val DiffCallback = object : DiffUtil.ItemCallback<HomeListItem>() {
             override fun areItemsTheSame(oldItem: HomeListItem, newItem: HomeListItem): Boolean {
+                // CHECKS IDENTITY BASED ON ROW TYPE AND IDENTIFIER.
                 return when {
                     oldItem is HomeListItem.MonthHeader && newItem is HomeListItem.MonthHeader ->
                         oldItem.title == newItem.title
@@ -44,12 +47,14 @@ class HomeListAdapter(
             }
 
             override fun areContentsTheSame(oldItem: HomeListItem, newItem: HomeListItem): Boolean {
+                // RELIES ON DATA CLASS EQUALITY FOR CONTENT CHECKS.
                 return oldItem == newItem
             }
         }
     }
 
     override fun getItemViewType(position: Int): Int {
+        // MAPS ITEMS TO THEIR CORRESPONDING VIEW TYPES.
         return when (getItem(position)) {
             is HomeListItem.MonthHeader -> VIEW_TYPE_HEADER
             is HomeListItem.AddButton -> VIEW_TYPE_ADD
@@ -58,6 +63,7 @@ class HomeListAdapter(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        // INFLATES THE PROPER VIEW HOLDER FOR THE REQUESTED TYPE.
         val inflater = LayoutInflater.from(parent.context)
         return when (viewType) {
             VIEW_TYPE_HEADER -> MonthHeaderViewHolder(
@@ -75,6 +81,7 @@ class HomeListAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        // DISPATCHES BINDING TO THE CORRECT VIEW HOLDER.
         when (val item = getItem(position)) {
             is HomeListItem.MonthHeader -> (holder as MonthHeaderViewHolder).bind(item)
             is HomeListItem.AddButton -> Unit
@@ -86,12 +93,14 @@ class HomeListAdapter(
         private val titleText: TextView = view.findViewById(R.id.month_label)
 
         fun bind(item: HomeListItem.MonthHeader) {
+            // DISPLAYS THE MONTH HEADER LABEL.
             titleText.text = item.title
         }
     }
 
     private class AddButtonViewHolder(view: View, onClick: () -> Unit) : RecyclerView.ViewHolder(view) {
         init {
+            // INVOKES THE ADD CALLBACK WHEN THE TILE IS PRESSED.
             view.setOnClickListener { onClick() }
         }
     }
@@ -108,12 +117,14 @@ class HomeListAdapter(
         private var currentItem: HomeListItem.ExpenseItem? = null
 
         init {
+            // DELEGATES CLICK EVENTS TO THE SUPPLIED LAMBDA.
             view.setOnClickListener {
                 currentItem?.let(onClick)
             }
         }
 
         fun bind(item: HomeListItem.ExpenseItem) {
+            // POPULATES THE LIST ROW WITH EXPENSE DETAILS.
             currentItem = item
             nameText.text = item.name
             amountText.text = item.amountFormatted

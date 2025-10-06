@@ -1,5 +1,6 @@
 package com.example.oinkonomics.data
 
+// DESCRIBES A USER-DEFINED SPENDING BUCKET.
 data class BudgetCategory(
     var id: Long = 0L,
     var userId: Long,

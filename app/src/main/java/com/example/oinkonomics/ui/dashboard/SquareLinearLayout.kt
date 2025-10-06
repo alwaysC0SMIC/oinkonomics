@@ -8,6 +8,7 @@ import android.widget.LinearLayout
 import kotlin.math.max
 import kotlin.math.min
 
+// ENSURES CHILDREN ARE RENDERED IN PERFECT SQUARE CARDS.
 class SquareLinearLayout @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -15,11 +16,12 @@ class SquareLinearLayout @JvmOverloads constructor(
 ) : LinearLayout(context, attrs, defStyleAttr) {
 
     init {
-        // Default children to the center of the square card.
+        // CENTERS CHILD VIEWS WITHIN THE SQUARE LAYOUT.
         gravity = Gravity.CENTER
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        // CHOOSES A SQUARE SIZE BASED ON THE PROVIDED CONSTRAINTS.
         val widthMode = MeasureSpec.getMode(widthMeasureSpec)
         val widthSize = MeasureSpec.getSize(widthMeasureSpec)
         val heightMode = MeasureSpec.getMode(heightMeasureSpec)

@@ -10,12 +10,14 @@ import com.example.oinkonomics.auth.AuthActivity
 import com.example.oinkonomics.data.SessionManager
 import com.example.oinkonomics.databinding.ActivityMainBinding
 
+// HOSTS THE MAIN NAVIGATION SHELL ONCE A USER IS AUTHENTICATED.
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var sessionManager: SessionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // SETS UP NAVIGATION ONLY AFTER ENSURING A USER IS LOGGED IN.
         super.onCreate(savedInstanceState)
 
         sessionManager = SessionManager(this)
@@ -34,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onResume() {
+        // RETURNS USERS TO AUTH FLOW IF THEIR SESSION DISAPPEARS.
         super.onResume()
         if (sessionManager.getLoggedInUserId() == null) {
             redirectToAuth()
@@ -41,6 +44,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun redirectToAuth() {
+        // LAUNCHES THE LOGIN EXPERIENCE WHEN NO SESSION EXISTS.
         startActivity(Intent(this, AuthActivity::class.java))
         finish()
     }

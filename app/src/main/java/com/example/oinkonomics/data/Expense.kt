@@ -3,7 +3,7 @@ package com.example.oinkonomics.data
 import java.time.LocalDate
 
 /**
- * Represents a single expense entry recorded by the user.
+ * REPRESENTS A SINGLE EXPENSE ENTRY.
  */
 data class Expense(
     val id: Long = 0L,
@@ -15,5 +15,6 @@ data class Expense(
     val receiptUri: String? = null,
     val createdAtEpochMillis: Long = System.currentTimeMillis()
 ) {
+    // EXPOSES THE ISO DATE AS A PARSED LOCALDATE.
     val localDate: LocalDate by lazy { LocalDate.parse(dateIso) }
 }

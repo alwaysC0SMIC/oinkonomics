@@ -22,6 +22,7 @@ import com.example.oinkonomics.data.OinkonomicsRepository
 import com.example.oinkonomics.data.SessionManager
 import kotlinx.coroutines.launch
 
+// MANAGES THE DASHBOARD OF BUDGET CATEGORIES AND TOTALS.
 class DashboardFragment : Fragment() {
 
     companion object {
@@ -52,6 +53,7 @@ class DashboardFragment : Fragment() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // VALIDATES THE USER SESSION BEFORE SHOWING CONTENT.
         super.onCreate(savedInstanceState)
         sessionManager = SessionManager(requireContext())
         userId = sessionManager.getLoggedInUserId()
@@ -66,6 +68,7 @@ class DashboardFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
+        // PREPARES THE GRID LAYOUT AND LOADS CATEGORY DATA.
         val root = inflater.inflate(R.layout.fragment_dashboard, container, false)
 
         repository = OinkonomicsRepository(requireContext())
@@ -88,6 +91,7 @@ class DashboardFragment : Fragment() {
     }
 
     override fun onResume() {
+        // REFRESHES CATEGORY DATA WHEN RETURNING TO THE SCREEN.
         super.onResume()
         if (this::gridLayout.isInitialized) {
             loadCategories()
@@ -95,6 +99,7 @@ class DashboardFragment : Fragment() {
     }
 
     private fun configureAddButton() {
+        // SETS UP THE ADD CATEGORY TILE WITH NEUTRAL COLORS.
         val neutralColor = ContextCompat.getColor(requireContext(), R.color.text_grey)
         val ring = addCategoryButton.findViewById<RadialProgressView>(R.id.add_progress_ring)
         ring.setColors(neutralColor)
@@ -103,6 +108,7 @@ class DashboardFragment : Fragment() {
     }
 
     private fun showAddCategoryDialog() {
+        // PROMPTS THE USER FOR A NEW CATEGORY NAME AND LIMIT.
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_category, null)
 
         AlertDialog.Builder(requireContext())
@@ -135,6 +141,7 @@ class DashboardFragment : Fragment() {
     }
 
     private fun addCategory(name: String, maxAmount: Double) {
+        // CREATES A CATEGORY AND UPDATES THE DASHBOARD LIST.
         val currentUserId = userId ?: return
         viewLifecycleOwner.lifecycleScope.launch {
             try {
@@ -155,6 +162,7 @@ class DashboardFragment : Fragment() {
     }
 
     private fun renderCategories() {
+        // RENDERS CATEGORY CARDS ALONGSIDE THE ADD TILE.
         if (addCategoryButton.parent != null) {
             (addCategoryButton.parent as ViewGroup).removeView(addCategoryButton)
         }
@@ -168,6 +176,7 @@ class DashboardFragment : Fragment() {
     }
 
     private fun showEditCategoryDialog(category: BudgetCategory, cardView: View) {
+        // ALLOWS THE USER TO MODIFY OR REMOVE AN EXISTING CATEGORY.
         val currentUserId = userId ?: return
         val dialogView = layoutInflater.inflate(R.layout.dialog_edit_category, null)
         val nameEditText = dialogView.findViewById<EditText>(R.id.edit_text_category_name)
@@ -231,6 +240,7 @@ class DashboardFragment : Fragment() {
         }
 
         removeButton.setOnClickListener {
+            // PROMPTS FOR CATEGORY REMOVAL CONFIRMATION.
             val index = budgetCategories.indexOfFirst { it.id == category.id }
             if (index == -1) {
                 dialog.dismiss()
@@ -266,6 +276,7 @@ class DashboardFragment : Fragment() {
     }
 
     private fun bindCategoryView(view: View, category: BudgetCategory) {
+        // POPULATES A CATEGORY CARD WITH TEXT AND COLORS.
         val nameTextView = view.findViewById<TextView>(R.id.category_name)
         val amountTextView = view.findViewById<TextView>(R.id.category_amount)
         val radialProgressView = view.findViewById<RadialProgressView>(R.id.category_progress_ring)
@@ -290,6 +301,7 @@ class DashboardFragment : Fragment() {
     }
 
     private fun loadCategories() {
+        // SYNCS LOCAL STATE WITH CATEGORIES AND EXPENSES FROM STORAGE.
         val currentUserId = userId ?: return
         viewLifecycleOwner.lifecycleScope.launch {
             try {
@@ -321,6 +333,7 @@ class DashboardFragment : Fragment() {
     }
 
     private fun updateTotalProgress() {
+        // SUMS SPENDING ACROSS CATEGORIES FOR THE HEADER WIDGETS.
         var totalSpent = uncategorizedSpent
         var totalMax = 0.0
         for (category in budgetCategories) {
@@ -338,6 +351,7 @@ class DashboardFragment : Fragment() {
     }
 
     private fun handleSessionExpired(message: String?) {
+        // CLEARS SESSION AND REDIRECTS WHEN USER DATA IS INVALID.
         if (!message.isNullOrBlank()) {
             Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
         }

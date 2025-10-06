@@ -6,6 +6,7 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
+// PROVIDES SQLITE ACCESS FOR USER, CATEGORY, AND EXPENSE DATA.
 class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
     context,
     DATABASE_NAME,
@@ -14,17 +15,20 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
 ) {
 
     override fun onConfigure(db: SQLiteDatabase) {
+        // ENSURES FOREIGN KEY CONSTRAINTS ARE ENFORCED.
         super.onConfigure(db)
         db.setForeignKeyConstraintsEnabled(true)
     }
 
     override fun onCreate(db: SQLiteDatabase) {
+        // INITIALIZES ALL TABLES FOR A FRESH DATABASE.
         createUsersTable(db)
         createBudgetCategoriesTable(db)
         createExpensesTable(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        // REBUILDS SCHEMA WHEN MOVING BETWEEN VERSIONS.
         if (oldVersion == newVersion) return
 
         db.execSQL("DROP TABLE IF EXISTS $TABLE_EXPENSES")
@@ -34,6 +38,7 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     private fun createUsersTable(db: SQLiteDatabase) {
+        // DEFINES THE USERS TABLE.
         db.execSQL(
             """
             CREATE TABLE IF NOT EXISTS $TABLE_USERS (
@@ -46,6 +51,7 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     private fun createBudgetCategoriesTable(db: SQLiteDatabase) {
+        // DEFINES THE BUDGET CATEGORY TABLE AND CONSTRAINTS.
         db.execSQL(
             """
             CREATE TABLE IF NOT EXISTS $TABLE_BUDGET_CATEGORIES (
@@ -61,6 +67,7 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     private fun createExpensesTable(db: SQLiteDatabase) {
+        // DEFINES THE EXPENSES TABLE AND RELATIONSHIPS.
         db.execSQL(
             """
             CREATE TABLE IF NOT EXISTS $TABLE_EXPENSES (
@@ -80,6 +87,7 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     fun insertCategory(category: BudgetCategory): Long {
+        // STORES A NEW CATEGORY AND RETURNS ITS ROW ID.
         val values = ContentValues().apply {
             put(COLUMN_CATEGORY_USER_ID, category.userId)
             put(COLUMN_CATEGORY_NAME, category.name)
@@ -90,6 +98,7 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     fun updateCategory(category: BudgetCategory): Int {
+        // UPDATES A CATEGORY'S DETAILS FOR THE OWNER.
         val values = ContentValues().apply {
             put(COLUMN_CATEGORY_NAME, category.name)
             put(COLUMN_CATEGORY_MAX, category.maxAmount)
@@ -104,6 +113,7 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     fun deleteCategory(categoryId: Long, userId: Long): Int {
+        // REMOVES A CATEGORY BELONGING TO A USER.
         return writableDatabase.delete(
             TABLE_BUDGET_CATEGORIES,
             "$COLUMN_CATEGORY_ID = ? AND $COLUMN_CATEGORY_USER_ID = ?",
@@ -112,6 +122,7 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     fun getCategories(userId: Long): List<BudgetCategory> {
+        // READS ALL CATEGORIES FOR THE GIVEN USER.
         val categories = mutableListOf<BudgetCategory>()
         val cursor: Cursor = readableDatabase.query(
             TABLE_BUDGET_CATEGORIES,
@@ -145,6 +156,7 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     fun insertExpense(expense: Expense): Long {
+        // SAVES AN EXPENSE AND ADJUSTS CATEGORY SPEND TOTALS.
         val db = writableDatabase
         db.beginTransaction()
         return try {
@@ -173,6 +185,7 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     fun updateExpense(expense: Expense, originalAmount: Double, originalCategoryId: Long?): Boolean {
+        // MODIFIES AN EXISTING EXPENSE AND UPDATES CATEGORY TOTALS.
         val db = writableDatabase
         db.beginTransaction()
         return try {
@@ -209,6 +222,7 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     fun deleteExpense(expenseId: Long, userId: Long): Boolean {
+        // REMOVES AN EXPENSE AND DEDUCTS ITS CATEGORY SPEND.
         val db = writableDatabase
         db.beginTransaction()
         return try {
@@ -233,6 +247,7 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     fun getExpenses(userId: Long): List<Expense> {
+        // LOADS ALL EXPENSES FOR A USER ORDERED BY TIME.
         val expenses = mutableListOf<Expense>()
         val cursor = readableDatabase.query(
             TABLE_EXPENSES,
@@ -261,10 +276,12 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     fun getExpense(expenseId: Long, userId: Long): Expense? {
+        // FETCHES A SINGLE EXPENSE IF IT BELONGS TO THE USER.
         return getExpenseInternal(readableDatabase, expenseId, userId)
     }
 
     fun insertUser(username: String, hashedPassword: String): Long {
+        // CREATES A NEW USER ROW WITH HASHED CREDENTIALS.
         val values = ContentValues().apply {
             put(COLUMN_USER_NAME, username)
             put(COLUMN_USER_PASSWORD, hashedPassword)
@@ -273,6 +290,7 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     fun getUserIdIfValid(username: String, hashedPassword: String): Long? {
+        // RETURNS USER ID WHEN THE PROVIDED CREDENTIALS MATCH.
         val cursor = readableDatabase.query(
             TABLE_USERS,
             arrayOf(COLUMN_USER_ID),
@@ -288,6 +306,7 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     fun userExists(username: String): Boolean {
+        // CHECKS IF A USERNAME IS ALREADY REGISTERED.
         val cursor = readableDatabase.query(
             TABLE_USERS,
             arrayOf(COLUMN_USER_ID),
@@ -303,6 +322,7 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     fun userExistsById(userId: Long): Boolean {
+        // CONFIRMS THAT A USER RECORD EXISTS FOR THE ID.
         val cursor = readableDatabase.query(
             TABLE_USERS,
             arrayOf(COLUMN_USER_ID),
@@ -318,6 +338,7 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     private fun Cursor.toExpense(): Expense {
+        // MAPS THE CURRENT CURSOR ROW TO AN EXPENSE OBJECT.
         return Expense(
             id = getLong(getColumnIndexOrThrow(COLUMN_EXPENSE_ID)),
             userId = getLong(getColumnIndexOrThrow(COLUMN_EXPENSE_USER_ID)),
@@ -331,11 +352,13 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     private fun Cursor.getNullableLong(columnName: String): Long? {
+        // READS A NULLABLE LONG COLUMN SAFELY.
         val index = getColumnIndexOrThrow(columnName)
         return if (isNull(index)) null else getLong(index)
     }
 
     private fun getExpenseInternal(db: SQLiteDatabase, expenseId: Long, userId: Long): Expense? {
+        // LOOKS UP A USER'S EXPENSE WITHIN AN EXISTING TRANSACTION.
         val cursor = db.query(
             TABLE_EXPENSES,
             arrayOf(
@@ -360,6 +383,7 @@ class OinkonomicsDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     private fun adjustCategorySpent(db: SQLiteDatabase, categoryId: Long?, delta: Double) {
+        // INCREMENTS OR DECREMENTS THE CATEGORY SPEND COLUMN.
         if (categoryId == null) return
         db.execSQL(
             """

@@ -9,12 +9,12 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.example.oinkonomics.databinding.FragmentMoreBinding
 
+// SHOWS THE MORE TAB CONTENT.
 class MoreFragment : Fragment() {
 
     private var _binding: FragmentMoreBinding? = null
 
-    // This property is only valid between onCreateView and
-    // onDestroyView.
+    // THIS PROPERTY IS ONLY VALID BETWEEN ONCREATEVIEW AND ONDESTROYVIEW.
     private val binding get() = _binding!!
 
     override fun onCreateView(
@@ -22,17 +22,19 @@ class MoreFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        // INFLATES THE MORE TAB LAYOUT.
         val moreViewModel =
             ViewModelProvider(this).get(MoreViewModel::class.java)
 
         _binding = FragmentMoreBinding.inflate(inflater, container, false)
         val root: View = binding.root
 
-        // Custom layout implemented - no need for placeholder text
+        // CUSTOM LAYOUT IMPLEMENTED - NO NEED FOR PLACEHOLDER TEXT.
         return root
     }
 
     override fun onDestroyView() {
+        // CLEARS BINDING REFERENCES TO PREVENT LEAKS.
         super.onDestroyView()
         _binding = null
     }

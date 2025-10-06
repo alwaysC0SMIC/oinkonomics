@@ -42,6 +42,7 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
+// DRIVES THE HOME TAB WITH EXPENSE LISTS AND SUMMARY STATS.
 class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
@@ -62,7 +63,7 @@ class HomeFragment : Fragment() {
             try {
                 requireContext().contentResolver.takePersistableUriPermission(uri, flags)
             } catch (_: SecurityException) {
-                // Ignore if permission cannot be persisted (e.g. from gallery shortcut)
+                // IGNORE IF PERMISSION CANNOT BE PERSISTED (E.G. FROM GALLERY SHORTCUT).
             }
         }
         pendingReceiptCallback?.invoke(uri)
@@ -75,6 +76,7 @@ class HomeFragment : Fragment() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // ENSURES A USER SESSION EXISTS BEFORE SHOWING THE SCREEN.
         super.onCreate(savedInstanceState)
         val userId = sessionManager.getLoggedInUserId()
         if (userId == null || userId < 0) {
@@ -88,6 +90,7 @@ class HomeFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        // INFLATES THE LAYOUT AND PREPARES LIST AND OBSERVERS.
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         setupRecyclerView()
         observeViewModel()
@@ -95,11 +98,13 @@ class HomeFragment : Fragment() {
     }
 
     override fun onResume() {
+        // REFRESHES DATA WHEN RETURNING TO THE FRAGMENT.
         super.onResume()
         viewModel.refreshData()
     }
 
     private fun setupRecyclerView() {
+        // CONFIGURES THE EXPENSE LIST WITH CLICK HANDLERS AND SPACING.
         adapter = HomeListAdapter(
             onAddExpense = { showExpenseDialog(null) },
             onExpenseClicked = { item ->
@@ -119,6 +124,7 @@ class HomeFragment : Fragment() {
                 parent: RecyclerView,
                 state: RecyclerView.State
             ) {
+                // ADDS SPACING BETWEEN LIST ROWS.
                 val position = parent.getChildAdapterPosition(view)
                 if (position != RecyclerView.NO_POSITION) {
                     outRect.bottom = spacing
@@ -128,6 +134,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun observeViewModel() {
+        // SUBSCRIBES TO VIEWMODEL STATE CHANGES.
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
@@ -149,6 +156,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun updateHeader(totalSpent: Double, totalBudget: Double) {
+        // REFRESHES SUMMARY LABELS AND PROGRESS BAR.
         val maxValue = max(max(totalBudget, totalSpent), 1.0).roundToInt()
         binding.totalBudgetProgress.max = maxValue
         binding.totalBudgetProgress.progress = totalSpent.roundToInt().coerceIn(0, maxValue)
@@ -163,6 +171,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun renderExpenses(expenses: List<Expense>, categories: List<BudgetCategory>) {
+        // BUILDS A GROUPED LIST OF MONTH HEADERS AND EXPENSES.
         val categoryNames = categories.associate { it.id to it.name }
         val sortedExpenses = expenses.sortedWith(
             compareByDescending<Expense> { it.localDate }
@@ -206,6 +215,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun showExpenseDialog(existingExpense: Expense?) {
+        // PRESENTS A FORM FOR ADDING OR EDITING AN EXPENSE.
         val state = viewModel.uiState.value
 
         val dialogView = layoutInflater.inflate(R.layout.dialog_expense_entry, null)
@@ -244,11 +254,12 @@ class HomeFragment : Fragment() {
             }
 
             override fun onNothingSelected(parent: AdapterView<*>) {
-                // no-op
+                // NO ACTION REQUIRED WHEN NOTHING SELECTED.
             }
         }
 
         fun updateReceiptPreview(uri: Uri?) {
+            // TOGGLES RECEIPT THUMBNAIL VISIBILITY.
             if (uri != null) {
                 receiptPreview.visibility = View.VISIBLE
                 receiptPreview.setImageURI(uri)
@@ -262,6 +273,7 @@ class HomeFragment : Fragment() {
         updateReceiptPreview(selectedReceiptUri)
 
         dateInput.setOnClickListener {
+            // OPENS A DATE PICKER SO USERS CAN CHOOSE A DAY.
             val current = selectedDate
             DatePickerDialog(
                 requireContext(),
@@ -276,6 +288,7 @@ class HomeFragment : Fragment() {
         }
 
         attachButton.setOnClickListener {
+            // TRIGGERS THE DOCUMENT PICKER FOR RECEIPTS.
             pendingReceiptCallback = { uri ->
                 selectedReceiptUri = uri
                 updateReceiptPreview(selectedReceiptUri)
@@ -284,6 +297,7 @@ class HomeFragment : Fragment() {
         }
 
         removeReceiptButton.setOnClickListener {
+            // REMOVES THE CURRENTLY ATTACHED RECEIPT.
             selectedReceiptUri = null
             updateReceiptPreview(null)
         }
@@ -302,6 +316,7 @@ class HomeFragment : Fragment() {
             .create()
 
         dialog.setOnShowListener {
+            // VALIDATES INPUT BEFORE DISMISSING THE DIALOG.
             val positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             positiveButton.setOnClickListener {
                 val name = nameInput.text.toString().trim()
@@ -333,6 +348,7 @@ class HomeFragment : Fragment() {
         }
 
         if (existingExpense != null) {
+            // ENABLES DELETION WHEN EDITING AN EXISTING EXPENSE.
             dialog.setButton(AlertDialog.BUTTON_NEUTRAL, getString(R.string.home_dialog_delete)) { _, _ ->
                 AlertDialog.Builder(requireContext())
                     .setTitle(R.string.home_delete_expense_title)
@@ -349,12 +365,14 @@ class HomeFragment : Fragment() {
     }
 
     private fun formatCurrency(value: Double): String {
+        // CONVERTS A DOUBLE TO A STRING WITH CURRENCY SYMBOLS.
         val absolute = abs(value)
         val formatted = currencyFormatter.format(absolute)
         return if (value < 0) "-R$formatted" else "R$formatted"
     }
 
     override fun onDestroyView() {
+        // CLEANS UP THE VIEW BINDING REFERENCE.
         super.onDestroyView()
         _binding = null
     }
