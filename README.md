@@ -51,22 +51,6 @@ Let Gradle sync automatically.
 3. **Run the app**
 Choose a device or emulator and click ▶️ Run.
 
-### 🗂️ Project Structure
-Oinkonomics/
-├── app/
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── java/              # Kotlin source files
-│   │   │   ├── res/               # Layouts, drawables, values
-│   │   │   └── AndroidManifest.xml
-│   ├── build.gradle.kts           # App-level build config
-├── build.gradle.kts               # Project-level build config
-├── gradle.properties              # Gradle settings
-├── settings.gradle.kts            # Module inclusion
-├── local.properties               # Local SDK path (excluded from VCS)
-├── .gitignore                     # Ignored files and directories
-└── gradlew / gradlew.bat          # Gradle wrappers
-
 ### 🤝 Contributing
 We welcome contributions! To contribute:
 Fork the repository
