@@ -2,6 +2,7 @@ package com.example.oinkonomics.auth
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -19,6 +20,10 @@ class AuthActivity : AppCompatActivity() {
     private lateinit var binding: ActivityAuthBinding
     private lateinit var repository: OinkonomicsRepository
     private lateinit var sessionManager: SessionManager
+
+    companion object {
+        private const val TAG = "AuthActivity"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // PREPARES AUTHENTICATION UI AND SHORT-CIRCUITS IF ALREADY SIGNED IN.
@@ -54,12 +59,21 @@ class AuthActivity : AppCompatActivity() {
             }
 
             lifecycleScope.launch {
-                // ATTEMPTS LOGIN AND STORES SESSION ON SUCCESS.
-                val userId = repository.authenticate(username, password)
-                if (userId != null) {
-                    sessionManager.setLoggedInUser(userId)
-                    launchMain()
-                } else {
+                try {
+                    // ATTEMPTS LOGIN AND STORES SESSION ON SUCCESS.
+                    val userId = repository.authenticate(username, password)
+                    if (userId != null) {
+                        sessionManager.setLoggedInUser(userId)
+                        launchMain()
+                    } else {
+                        Toast.makeText(
+                            this@AuthActivity,
+                            getString(R.string.auth_error_login_failed),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                } catch (ex: Exception) {
+                    Log.e(TAG, "Login failed", ex)
                     Toast.makeText(
                         this@AuthActivity,
                         getString(R.string.auth_error_login_failed),
@@ -85,17 +99,26 @@ class AuthActivity : AppCompatActivity() {
             }
 
             lifecycleScope.launch {
-                // CREATES A NEW ACCOUNT AND OPENS MAIN FLOW ON SUCCESS.
-                val result = repository.registerUser(username, password)
-                result.onSuccess { userId ->
-                    sessionManager.setLoggedInUser(userId)
-                    Toast.makeText(
-                        this@AuthActivity,
-                        getString(R.string.auth_success_registered),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    launchMain()
-                }.onFailure {
+                try {
+                    // CREATES A NEW ACCOUNT AND OPENS MAIN FLOW ON SUCCESS.
+                    val result = repository.registerUser(username, password)
+                    result.onSuccess { userId ->
+                        sessionManager.setLoggedInUser(userId)
+                        Toast.makeText(
+                            this@AuthActivity,
+                            getString(R.string.auth_success_registered),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        launchMain()
+                    }.onFailure {
+                        Toast.makeText(
+                            this@AuthActivity,
+                            getString(R.string.auth_error_username_taken),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                } catch (ex: Exception) {
+                    Log.e(TAG, "Registration failed", ex)
                     Toast.makeText(
                         this@AuthActivity,
                         getString(R.string.auth_error_username_taken),
