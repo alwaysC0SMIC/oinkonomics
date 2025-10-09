@@ -1,0 +1,5 @@
+<resources>
+    <string name="facebook_app_id" translatable="false">FACEBOOK_APP_ID_PLACEHOLDER</string>
+    <string name="facebook_client_token" translatable="false">FACEBOOK_CLIENT_TOKEN_PLACEHOLDER</string>
+    <string name="fb_login_protocol_scheme" translatable="false">fbFACEBOOK_APP_ID_PLACEHOLDER</string>
+</resources>
