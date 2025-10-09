@@ -52,6 +52,7 @@ Let Gradle sync automatically.
    - Create a Firebase project and enable **Firestore** in *Native mode*.
    - Add an Android app that matches the `applicationId` defined in `app/build.gradle.kts` (`com.example.oinkonomics`).
    - Download the generated `google-services.json` file and place it in the `app/` directory.
+   - Enable **Anonymous Authentication** under *Build → Authentication → Sign-in method* so the app can open a Firestore session without prompting users to log in.
    - Alternatively, initialise Firebase with a custom `FirebaseOptions` configuration before using the repository.
 
 4. **Run the app**
