@@ -16,6 +16,7 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest
 import java.time.LocalDate
+import java.util.Locale
 import kotlin.math.max
 import kotlin.random.Random
 
@@ -193,14 +194,27 @@ class OinkonomicsRepository(context: Context) {
     suspend fun registerUser(username: String, password: String): Result<Long> = withContext(Dispatchers.IO) {
         // CREATES A USER DOCUMENT IF THE NAME IS AVAILABLE.
         ensureAuthenticated()
-        val existingUser = usersCollection
-            .whereEqualTo(FIELD_USERNAME, username)
+        val sanitizedUsername = username.trim()
+        val normalizedUsername = sanitizedUsername.lowercase(Locale.ROOT)
+
+        val normalizedMatch = usersCollection
+            .whereEqualTo(FIELD_USERNAME_NORMALIZED, normalizedUsername)
             .limit(1)
             .get()
             .await()
-        if (!existingUser.isEmpty) {
+        if (!normalizedMatch.isEmpty) {
             return@withContext Result.failure(IllegalStateException("Username already taken"))
         }
+
+        val legacyMatch = usersCollection
+            .whereEqualTo(FIELD_USERNAME, sanitizedUsername)
+            .limit(1)
+            .get()
+            .await()
+        if (!legacyMatch.isEmpty) {
+            return@withContext Result.failure(IllegalStateException("Username already taken"))
+        }
+
         val hashed = password.sha256()
         var userId: Long
         do {
@@ -209,7 +223,8 @@ class OinkonomicsRepository(context: Context) {
         } while (doc.exists())
         val userData = mapOf(
             FIELD_ID to userId,
-            FIELD_USERNAME to username,
+            FIELD_USERNAME to sanitizedUsername,
+            FIELD_USERNAME_NORMALIZED to normalizedUsername,
             FIELD_PASSWORD to hashed
         )
         userDocument(userId).set(userData).await()
@@ -219,13 +234,26 @@ class OinkonomicsRepository(context: Context) {
     suspend fun authenticate(username: String, password: String): Long? = withContext(Dispatchers.IO) {
         // LOOKS UP A USER MATCHING THE PROVIDED CREDENTIALS IN FIRESTORE.
         ensureAuthenticated()
-        val snapshot = usersCollection
-            .whereEqualTo(FIELD_USERNAME, username)
-            .whereEqualTo(FIELD_PASSWORD, password.sha256())
+        val sanitizedUsername = username.trim()
+        val normalizedUsername = sanitizedUsername.lowercase(Locale.ROOT)
+        val hashedPassword = password.sha256()
+
+        val normalizedSnapshot = usersCollection
+            .whereEqualTo(FIELD_USERNAME_NORMALIZED, normalizedUsername)
+            .whereEqualTo(FIELD_PASSWORD, hashedPassword)
             .limit(1)
             .get()
             .await()
-        val document = snapshot.documents.firstOrNull() ?: return@withContext null
+
+        val document = normalizedSnapshot.documents.firstOrNull() ?: run {
+            val legacySnapshot = usersCollection
+                .whereEqualTo(FIELD_USERNAME, sanitizedUsername)
+                .whereEqualTo(FIELD_PASSWORD, hashedPassword)
+                .limit(1)
+                .get()
+                .await()
+            legacySnapshot.documents.firstOrNull() ?: return@withContext null
+        }
         (document.getLong(FIELD_ID) ?: document.id.toLongOrNull())
     }
 
@@ -362,6 +390,7 @@ class OinkonomicsRepository(context: Context) {
         private const val FIELD_ID = "id"
         private const val FIELD_USER_ID = "userId"
         private const val FIELD_USERNAME = "username"
+        private const val FIELD_USERNAME_NORMALIZED = "usernameNormalized"
         private const val FIELD_PASSWORD = "password"
         private const val FIELD_NAME = "name"
         private const val FIELD_MAX_AMOUNT = "maxAmount"
