@@ -3,6 +3,7 @@ package com.example.oinkonomics.data
 import android.content.Context
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
+import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
@@ -12,6 +13,8 @@ import com.google.firebase.ktx.Firebase
 import com.google.firebase.firestore.ktx.firestore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest
 import java.time.LocalDate
@@ -23,6 +26,8 @@ class OinkonomicsRepository(context: Context) {
 
     private val appContext = context.applicationContext
     private val firestore: FirebaseFirestore
+    private val auth = Firebase.auth
+    private val authMutex = Mutex()
 
     init {
         if (FirebaseApp.getApps(appContext).isEmpty()) {
@@ -44,6 +49,7 @@ class OinkonomicsRepository(context: Context) {
     private val usersCollection get() = firestore.collection(COLLECTION_USERS)
 
     suspend fun getBudgetCategories(userId: Long): List<BudgetCategory> = withContext(Dispatchers.IO) {
+        ensureAuthenticated()
         // FETCHES THE USER'S CATEGORY LIST FROM FIRESTORE.
         ensureValidUser(userId)
         val snapshot = userDocument(userId)
@@ -59,6 +65,7 @@ class OinkonomicsRepository(context: Context) {
         maxAmount: Double,
         spentAmount: Double = 0.0
     ): BudgetCategory = withContext(Dispatchers.IO) {
+        ensureAuthenticated()
         // CREATES AND RETURNS A NEW CATEGORY DOCUMENT.
         ensureValidUser(userId)
         val categoryId = generateStableId()
@@ -78,6 +85,7 @@ class OinkonomicsRepository(context: Context) {
     }
 
     suspend fun updateBudgetCategory(category: BudgetCategory) = withContext(Dispatchers.IO) {
+        ensureAuthenticated()
         // PERSISTS CHANGES TO A CATEGORY DOCUMENT.
         ensureValidUser(category.userId)
         userDocument(category.userId)
@@ -88,6 +96,7 @@ class OinkonomicsRepository(context: Context) {
     }
 
     suspend fun deleteBudgetCategory(categoryId: Long, userId: Long) = withContext(Dispatchers.IO) {
+        ensureAuthenticated()
         // REMOVES A CATEGORY AND CLEARS REFERENCES IN EXPENSES.
         ensureValidUser(userId)
         val userDoc = userDocument(userId)
@@ -106,6 +115,7 @@ class OinkonomicsRepository(context: Context) {
     }
 
     suspend fun getExpenses(userId: Long): List<Expense> = withContext(Dispatchers.IO) {
+        ensureAuthenticated()
         // RETRIEVES ALL EXPENSES BELONGING TO THE USER FROM FIRESTORE.
         ensureValidUser(userId)
         val snapshot = userDocument(userId)
@@ -124,6 +134,7 @@ class OinkonomicsRepository(context: Context) {
         date: LocalDate,
         receiptUri: String?
     ): Expense = withContext(Dispatchers.IO) {
+        ensureAuthenticated()
         // RECORDS A NEW EXPENSE DOCUMENT AND UPDATES THE CATEGORY TOTALS.
         ensureValidUser(userId)
         val userDoc = userDocument(userId)
@@ -148,6 +159,7 @@ class OinkonomicsRepository(context: Context) {
     }
 
     suspend fun updateExpense(expense: Expense): Boolean = withContext(Dispatchers.IO) {
+        ensureAuthenticated()
         // APPLIES CHANGES TO AN EXISTING EXPENSE AND ADJUSTS CATEGORY TOTALS.
         ensureValidUser(expense.userId)
         val userDoc = userDocument(expense.userId)
@@ -173,6 +185,7 @@ class OinkonomicsRepository(context: Context) {
     }
 
     suspend fun deleteExpense(expenseId: Long, userId: Long): Boolean = withContext(Dispatchers.IO) {
+        ensureAuthenticated()
         // REMOVES AN EXPENSE DOCUMENT AND DEDUCTS ITS CATEGORY SPEND.
         ensureValidUser(userId)
         val userDoc = userDocument(userId)
@@ -190,6 +203,7 @@ class OinkonomicsRepository(context: Context) {
     }
 
     suspend fun registerUser(username: String, password: String): Result<Long> = withContext(Dispatchers.IO) {
+        ensureAuthenticated()
         // CREATES A USER DOCUMENT IF THE NAME IS AVAILABLE.
         val existingUser = usersCollection
             .whereEqualTo(FIELD_USERNAME, username)
@@ -215,6 +229,7 @@ class OinkonomicsRepository(context: Context) {
     }
 
     suspend fun authenticate(username: String, password: String): Long? = withContext(Dispatchers.IO) {
+        ensureAuthenticated()
         // LOOKS UP A USER MATCHING THE PROVIDED CREDENTIALS IN FIRESTORE.
         val snapshot = usersCollection
             .whereEqualTo(FIELD_USERNAME, username)
@@ -247,6 +262,21 @@ class OinkonomicsRepository(context: Context) {
         val exists = userDocument(userId).get().await().exists()
         if (!exists) {
             throw MissingUserException()
+        }
+    }
+
+    private suspend fun ensureAuthenticated() {
+        if (auth.currentUser != null) return
+        authMutex.withLock {
+            if (auth.currentUser != null) return
+            try {
+                auth.signInAnonymously().await()
+            } catch (error: Exception) {
+                throw IllegalStateException(
+                    "Firebase anonymous authentication failed. Enable anonymous sign-in or adjust Firestore security rules.",
+                    error
+                )
+            }
         }
     }
 
