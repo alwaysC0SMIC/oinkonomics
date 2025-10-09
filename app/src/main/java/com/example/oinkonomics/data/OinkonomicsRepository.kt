@@ -219,10 +219,12 @@ class OinkonomicsRepository(context: Context) {
             userId = generateStableId()
             val doc = userDocument(userId).get().await()
         } while (doc.exists())
-        val userData = mapOf(
+        val userData = mutableMapOf<String, Any?>(
             FIELD_ID to userId,
             FIELD_USERNAME to username,
-            FIELD_PASSWORD to hashed
+            FIELD_PASSWORD to hashed,
+            FIELD_EMAIL to username,
+            FIELD_DISPLAY_NAME to username
         )
         userDocument(userId).set(userData).await()
         Result.success(userId)
@@ -239,6 +241,51 @@ class OinkonomicsRepository(context: Context) {
             .await()
         val document = snapshot.documents.firstOrNull() ?: return@withContext null
         (document.getLong(FIELD_ID) ?: document.id.toLongOrNull())
+    }
+
+    suspend fun ensureUserForCurrentAuth(): Long = withContext(Dispatchers.IO) {
+        val current = auth.currentUser
+            ?: throw IllegalStateException("No Firebase user is currently signed in.")
+
+        val existingUser = usersCollection
+            .whereEqualTo(FIELD_AUTH_UID, current.uid)
+            .limit(1)
+            .get()
+            .await()
+
+        val document = existingUser.documents.firstOrNull()
+        if (document != null) {
+            return@withContext document.getLong(FIELD_ID)
+                ?: document.id.toLongOrNull()
+                ?: throw IllegalStateException("User document missing identifier.")
+        }
+
+        var userId: Long
+        do {
+            userId = generateStableId()
+            val snapshot = userDocument(userId).get().await()
+        } while (snapshot.exists())
+
+        val userData = mutableMapOf<String, Any?>(
+            FIELD_ID to userId,
+            FIELD_AUTH_UID to current.uid
+        )
+
+        current.email?.let {
+            userData[FIELD_EMAIL] = it
+            userData[FIELD_USERNAME] = it
+        }
+        current.displayName?.let { displayName ->
+            userData[FIELD_DISPLAY_NAME] = displayName
+            userData.putIfAbsent(FIELD_USERNAME, displayName)
+        }
+
+        if (!userData.containsKey(FIELD_USERNAME)) {
+            userData[FIELD_USERNAME] = current.uid
+        }
+
+        userDocument(userId).set(userData).await()
+        userId
     }
 
     private suspend fun getExpense(expenseId: Long, userId: Long): Expense? {
@@ -382,6 +429,9 @@ class OinkonomicsRepository(context: Context) {
         private const val FIELD_USER_ID = "userId"
         private const val FIELD_USERNAME = "username"
         private const val FIELD_PASSWORD = "password"
+        private const val FIELD_AUTH_UID = "authUid"
+        private const val FIELD_DISPLAY_NAME = "displayName"
+        private const val FIELD_EMAIL = "email"
         private const val FIELD_NAME = "name"
         private const val FIELD_MAX_AMOUNT = "maxAmount"
         private const val FIELD_SPENT_AMOUNT = "spentAmount"
