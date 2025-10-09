@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "558581310369",
+    "project_id": "oinkonomics-8991b",
+    "storage_bucket": "oinkonomics-8991b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:558581310369:android:e5f70cd9f459af7b95e1e0",
+        "android_client_info": {
+          "package_name": "com.example.oinkonomics"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCb0xyGFL2FcMDgPRIuuIc7LGIk0bBaoLU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
