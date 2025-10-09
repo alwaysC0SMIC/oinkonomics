@@ -37,8 +37,8 @@
   <string name="auth_sign_in_facebook">Continue with Facebook</string>
   <string name="auth_sign_in_microsoft">Continue with Microsoft</string>
   <string name="auth_sign_in_twitter">Continue with Twitter</string>
-  <string name="auth_error_provider_failed">We couldn&#39;t complete that sign in. Please try again.</string>
-  <string name="auth_error_provider_not_configured">This sign in option isn&#39;t configured yet. Update the Firebase provider settings and try again.</string>
+  <string name="auth_error_provider_failed">We couldn&apos;t complete that sign in. Please try again.</string>
+  <string name="auth_error_provider_not_configured">This sign in option isn&apos;t configured yet. Update the Firebase provider settings and try again.</string>
   <!-- HOME -->
   <string name="home_total_spent_value">%1$s / %2$s</string>
   <string name="home_total_left_value">%1$s left</string>
