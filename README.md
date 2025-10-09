@@ -48,8 +48,14 @@ Before you begin, ensure you have the following installed:
 2. **Open in Android Studio**
 Let Gradle sync automatically.
 
-3. **Run the app**
-Choose a device or emulator and click ▶️ Run.
+3. **Configure Firebase**
+   - Create a Firebase project and enable **Firestore** in *Native mode*.
+   - Add an Android app that matches the `applicationId` defined in `app/build.gradle.kts` (`com.example.oinkonomics`).
+   - Download the generated `google-services.json` file and place it in the `app/` directory.
+   - Alternatively, initialise Firebase with a custom `FirebaseOptions` configuration before using the repository.
+
+4. **Run the app**
+Choose a device or emulator and click ▶️ Run. The app now persists users, categories, and expenses in Firestore.
 
 ### 🤝 Contributing
 We welcome contributions! To contribute:
