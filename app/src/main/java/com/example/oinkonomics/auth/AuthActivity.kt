@@ -181,7 +181,7 @@ class AuthActivity : AppCompatActivity() {
     }
 
     private fun setupGoogleSignIn() {
-        val webClientId = getOptionalStringResource("default_web_client_id")
+        val webClientId = runCatching { getString(R.string.default_web_client_id) }.getOrNull()
         val builder = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestEmail()
         if (!webClientId.isNullOrBlank()) {
@@ -311,16 +311,8 @@ class AuthActivity : AppCompatActivity() {
     }
 
     private fun isFacebookConfigured(): Boolean {
-        val appId = getOptionalStringResource("facebook_app_id")
-        return !appId.isNullOrBlank() && !appId.contains("PLACEHOLDER", ignoreCase = true)
-    }
-
-    private fun getOptionalStringResource(name: String): String? {
-        val identifier = resources.getIdentifier(name, "string", packageName)
-        if (identifier == 0) {
-            return null
-        }
-        return runCatching { getString(identifier) }.getOrNull()
+        val appId = getString(R.string.facebook_app_id)
+        return appId.isNotBlank() && !appId.contains("PLACEHOLDER", ignoreCase = true)
     }
 
     private fun launchMain() {
