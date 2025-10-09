@@ -32,6 +32,13 @@
   <string name="auth_error_login_failed">Incorrect username or password.</string>
   <string name="auth_error_username_taken">That username is already registered.</string>
   <string name="auth_success_registered">Account created! You are now signed in.</string>
+  <string name="auth_social_title">Or continue with</string>
+  <string name="auth_sign_in_google">Continue with Google</string>
+  <string name="auth_sign_in_facebook">Continue with Facebook</string>
+  <string name="auth_sign_in_microsoft">Continue with Microsoft</string>
+  <string name="auth_sign_in_twitter">Continue with Twitter</string>
+  <string name="auth_error_provider_failed">We couldn&#39;t complete that sign in. Please try again.</string>
+  <string name="auth_error_provider_not_configured">This sign in option isn&#39;t configured yet. Update the Firebase provider settings and try again.</string>
   <!-- HOME -->
   <string name="home_total_spent_value">%1$s / %2$s</string>
   <string name="home_total_left_value">%1$s left</string>
