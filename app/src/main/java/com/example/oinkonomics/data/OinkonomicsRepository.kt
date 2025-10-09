@@ -3,6 +3,7 @@ package com.example.oinkonomics.data
 import android.content.Context
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
+import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
@@ -191,6 +192,7 @@ class OinkonomicsRepository(context: Context) {
 
     suspend fun registerUser(username: String, password: String): Result<Long> = withContext(Dispatchers.IO) {
         // CREATES A USER DOCUMENT IF THE NAME IS AVAILABLE.
+        ensureAuthenticated()
         val existingUser = usersCollection
             .whereEqualTo(FIELD_USERNAME, username)
             .limit(1)
@@ -216,6 +218,7 @@ class OinkonomicsRepository(context: Context) {
 
     suspend fun authenticate(username: String, password: String): Long? = withContext(Dispatchers.IO) {
         // LOOKS UP A USER MATCHING THE PROVIDED CREDENTIALS IN FIRESTORE.
+        ensureAuthenticated()
         val snapshot = usersCollection
             .whereEqualTo(FIELD_USERNAME, username)
             .whereEqualTo(FIELD_PASSWORD, password.sha256())
@@ -244,9 +247,17 @@ class OinkonomicsRepository(context: Context) {
 
     private suspend fun ensureValidUser(userId: Long) {
         // THROWS IF THE TARGET USER CANNOT BE FOUND IN FIRESTORE.
+        ensureAuthenticated()
         val exists = userDocument(userId).get().await().exists()
         if (!exists) {
             throw MissingUserException()
+        }
+    }
+
+    private suspend fun ensureAuthenticated() {
+        val auth = Firebase.auth
+        if (auth.currentUser == null) {
+            auth.signInAnonymously().await()
         }
     }
 
