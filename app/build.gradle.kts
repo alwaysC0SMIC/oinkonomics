@@ -58,3 +58,17 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }
+
+// Apply Google Services plugin only if a configuration file exists to avoid failing builds
+val googleServicesJsonPaths = listOf(
+    file("google-services.json"),
+    file("src/google-services.json"),
+    file("src/debug/google-services.json"),
+    file("src/release/google-services.json")
+)
+
+if (googleServicesJsonPaths.any { it.exists() }) {
+    apply(plugin = "com.google.gms.google-services")
+} else {
+    logger.lifecycle("google-services.json not found; skipping Google Services plugin for project '${project.name}'")
+}

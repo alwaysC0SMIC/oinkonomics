@@ -31,7 +31,10 @@
   <string name="auth_error_password_mismatch">Passwords do not match.</string>
   <string name="auth_error_login_failed">Incorrect username or password.</string>
   <string name="auth_error_username_taken">That username is already registered.</string>
+  <string name="auth_error_unexpected">Something went wrong. Please try again.</string>
   <string name="auth_success_registered">Account created! You are now signed in.</string>
+  <!-- RUNTIME ERRORS -->
+  <string name="firebase_missing_configuration">Firebase not configured. Add app/google-services.json and rebuild.</string>
   <!-- HOME -->
   <string name="home_total_spent_value">%1$s / %2$s</string>
   <string name="home_total_left_value">%1$s left</string>
@@ -45,5 +48,6 @@
   <string name="home_delete_expense_title">Remove Expense</string>
   <string name="home_delete_expense_message">Are you sure you want to delete this expense?</string>
   <string name="home_total_spent_label">Total Budget Spent</string>
+  <string name="logout">Log out</string>
 </resources>
 

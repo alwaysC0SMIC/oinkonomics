@@ -27,7 +27,16 @@ class AuthActivity : AppCompatActivity() {
         binding = ActivityAuthBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        repository = OinkonomicsRepository(this)
+			try {
+				repository = OinkonomicsRepository(this)
+			} catch (ex: IllegalStateException) {
+				Toast.makeText(
+					this,
+					getString(R.string.firebase_missing_configuration),
+					Toast.LENGTH_LONG
+				).show()
+				return
+			}
         sessionManager = SessionManager(this)
 
         sessionManager.getLoggedInUserId()?.let {
@@ -53,20 +62,28 @@ class AuthActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            lifecycleScope.launch {
-                // ATTEMPTS LOGIN AND STORES SESSION ON SUCCESS.
-                val userId = repository.authenticate(username, password)
-                if (userId != null) {
-                    sessionManager.setLoggedInUser(userId)
-                    launchMain()
-                } else {
-                    Toast.makeText(
-                        this@AuthActivity,
-                        getString(R.string.auth_error_login_failed),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
+				lifecycleScope.launch {
+					// ATTEMPTS LOGIN AND STORES SESSION ON SUCCESS.
+					try {
+						val userId = repository.authenticate(username, password)
+						if (userId != null) {
+							sessionManager.setLoggedInUser(userId)
+							launchMain()
+						} else {
+							Toast.makeText(
+								this@AuthActivity,
+								getString(R.string.auth_error_login_failed),
+								Toast.LENGTH_SHORT
+							).show()
+						}
+					} catch (ex: Exception) {
+						Toast.makeText(
+							this@AuthActivity,
+							getString(R.string.auth_error_unexpected),
+							Toast.LENGTH_LONG
+						).show()
+					}
+				}
         }
 
         binding.registerButton.setOnClickListener {
@@ -84,25 +101,33 @@ class AuthActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            lifecycleScope.launch {
-                // CREATES A NEW ACCOUNT AND OPENS MAIN FLOW ON SUCCESS.
-                val result = repository.registerUser(username, password)
-                result.onSuccess { userId ->
-                    sessionManager.setLoggedInUser(userId)
-                    Toast.makeText(
-                        this@AuthActivity,
-                        getString(R.string.auth_success_registered),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    launchMain()
-                }.onFailure {
-                    Toast.makeText(
-                        this@AuthActivity,
-                        getString(R.string.auth_error_username_taken),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
+			lifecycleScope.launch {
+				// CREATES A NEW ACCOUNT AND OPENS MAIN FLOW ON SUCCESS.
+				try {
+					val result = repository.registerUser(username, password)
+					result.onSuccess { userId ->
+						sessionManager.setLoggedInUser(userId)
+						Toast.makeText(
+							this@AuthActivity,
+							getString(R.string.auth_success_registered),
+							Toast.LENGTH_SHORT
+						).show()
+						launchMain()
+					}.onFailure {
+						Toast.makeText(
+							this@AuthActivity,
+							getString(R.string.auth_error_username_taken),
+							Toast.LENGTH_SHORT
+						).show()
+					}
+				} catch (ex: Exception) {
+					Toast.makeText(
+						this@AuthActivity,
+						getString(R.string.auth_error_unexpected),
+						Toast.LENGTH_LONG
+					).show()
+				}
+			}
         }
     }
 

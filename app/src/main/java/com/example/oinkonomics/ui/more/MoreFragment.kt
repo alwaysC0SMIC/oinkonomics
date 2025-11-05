@@ -1,5 +1,6 @@
 package com.example.oinkonomics.ui.more
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -7,6 +8,8 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import com.example.oinkonomics.auth.AuthActivity
+import com.example.oinkonomics.data.SessionManager
 import com.example.oinkonomics.databinding.FragmentMoreBinding
 
 // SHOWS THE MORE TAB CONTENT.
@@ -27,10 +30,17 @@ class MoreFragment : Fragment() {
             ViewModelProvider(this).get(MoreViewModel::class.java)
 
         _binding = FragmentMoreBinding.inflate(inflater, container, false)
-        val root: View = binding.root
+			val root: View = binding.root
 
-        // CUSTOM LAYOUT IMPLEMENTED - NO NEED FOR PLACEHOLDER TEXT.
-        return root
+			// LOG OUT: CLEAR SESSION AND RETURN TO AUTH SCREEN.
+			binding.logoutButton.setOnClickListener {
+				SessionManager(requireContext()).clearSession()
+				startActivity(Intent(requireContext(), AuthActivity::class.java))
+				requireActivity().finish()
+			}
+
+			// CUSTOM LAYOUT IMPLEMENTED - NO NEED FOR PLACEHOLDER TEXT.
+			return root
     }
 
     override fun onDestroyView() {

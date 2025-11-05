@@ -193,6 +193,17 @@
 
         </LinearLayout>
 
+        <!-- Logout Button -->
+        <Button
+            android:id="@+id/logoutButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/logout"
+            android:textAllCaps="false"
+            android:backgroundTint="@color/teal_200"
+            tools:ignore="UsingOnClickInXml" />
+
     </LinearLayout>
 
 </ScrollView>
