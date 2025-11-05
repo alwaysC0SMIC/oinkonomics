@@ -1,6 +1,7 @@
 package com.example.oinkonomics.data
 
 import android.content.Context
+import android.util.Log
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.firestore.DocumentReference
@@ -25,32 +26,50 @@ class OinkonomicsRepository(context: Context) {
     private val firestore: FirebaseFirestore
 
     init {
-        if (FirebaseApp.getApps(appContext).isEmpty()) {
+        val existingApps = FirebaseApp.getApps(appContext)
+        Log.d(TAG, "Initialising Firebase. Existing apps=${existingApps.map { it.name }}")
+        if (existingApps.isEmpty()) {
             val options = FirebaseOptions.fromResource(appContext)
+            Log.d(TAG, "No cached FirebaseApp found. Options present=${options != null}")
             val app = if (options != null) {
+                Log.d(TAG, "Initialising Firebase with explicit FirebaseOptions")
                 FirebaseApp.initializeApp(appContext, options)
             } else {
+                Log.w(TAG, "FirebaseOptions resource missing. Falling back to google-services.json configuration")
                 FirebaseApp.initializeApp(appContext)
             }
             if (app == null) {
+                Log.e(TAG, "Firebase initialisation returned null app instance")
                 throw IllegalStateException(
                     "Firebase initialization failed. Add a valid google-services.json or FirebaseOptions configuration."
                 )
             }
+            Log.d(TAG, "FirebaseApp initialised successfully with name=${app.name}")
+        } else {
+            Log.d(TAG, "Reusing FirebaseApp instance(s): ${existingApps.joinToString { it.name }}")
         }
         firestore = Firebase.firestore
+        Log.d(TAG, "FirebaseFirestore instance initialised: ${firestore.app.name}")
     }
 
     private val usersCollection get() = firestore.collection(COLLECTION_USERS)
 
     suspend fun getBudgetCategories(userId: Long): List<BudgetCategory> = withContext(Dispatchers.IO) {
         // FETCHES THE USER'S CATEGORY LIST FROM FIRESTORE.
+        Log.d(TAG, "Fetching budget categories for userId=$userId")
         ensureValidUser(userId)
-        val snapshot = userDocument(userId)
-            .collection(COLLECTION_CATEGORIES)
-            .get()
-            .await()
-        snapshot.documents.mapNotNull { it.toBudgetCategory(userId) }.sortedBy { it.id }
+        return@withContext try {
+            val snapshot = userDocument(userId)
+                .collection(COLLECTION_CATEGORIES)
+                .get()
+                .await()
+            val categories = snapshot.documents.mapNotNull { it.toBudgetCategory(userId) }.sortedBy { it.id }
+            Log.d(TAG, "Fetched ${categories.size} categories for userId=$userId")
+            categories
+        } catch (ex: Exception) {
+            Log.e(TAG, "Failed to fetch budget categories for userId=$userId", ex)
+            throw ex
+        }
     }
 
     suspend fun createBudgetCategory(
@@ -60,60 +79,92 @@ class OinkonomicsRepository(context: Context) {
         spentAmount: Double = 0.0
     ): BudgetCategory = withContext(Dispatchers.IO) {
         // CREATES AND RETURNS A NEW CATEGORY DOCUMENT.
+        Log.d(TAG, "Creating budget category for userId=$userId name=$name maxAmount=$maxAmount spentAmount=$spentAmount")
         ensureValidUser(userId)
-        val categoryId = generateStableId()
-        val category = BudgetCategory(
-            id = categoryId,
-            userId = userId,
-            name = name,
-            maxAmount = maxAmount,
-            spentAmount = spentAmount
-        )
-        userDocument(userId)
-            .collection(COLLECTION_CATEGORIES)
-            .document(categoryId.toString())
-            .set(category.toMap())
-            .await()
-        category
+        return@withContext try {
+            val categoryId = generateStableId()
+            val category = BudgetCategory(
+                id = categoryId,
+                userId = userId,
+                name = name,
+                maxAmount = maxAmount,
+                spentAmount = spentAmount
+            )
+            userDocument(userId)
+                .collection(COLLECTION_CATEGORIES)
+                .document(categoryId.toString())
+                .set(category.toMap())
+                .await()
+            Log.d(TAG, "Created category $categoryId for userId=$userId")
+            category
+        } catch (ex: Exception) {
+            Log.e(TAG, "Failed to create budget category for userId=$userId", ex)
+            throw ex
+        }
     }
 
     suspend fun updateBudgetCategory(category: BudgetCategory) = withContext(Dispatchers.IO) {
         // PERSISTS CHANGES TO A CATEGORY DOCUMENT.
+        Log.d(TAG, "Updating budget category id=${category.id} for userId=${category.userId}")
         ensureValidUser(category.userId)
-        userDocument(category.userId)
-            .collection(COLLECTION_CATEGORIES)
-            .document(category.id.toString())
-            .set(category.toMap(), SetOptions.merge())
-            .await()
+        try {
+            userDocument(category.userId)
+                .collection(COLLECTION_CATEGORIES)
+                .document(category.id.toString())
+                .set(category.toMap(), SetOptions.merge())
+                .await()
+            Log.d(TAG, "Updated budget category id=${category.id} for userId=${category.userId}")
+        } catch (ex: Exception) {
+            Log.e(TAG, "Failed to update budget category id=${category.id} for userId=${category.userId}", ex)
+            throw ex
+        }
     }
 
     suspend fun deleteBudgetCategory(categoryId: Long, userId: Long) = withContext(Dispatchers.IO) {
         // REMOVES A CATEGORY AND CLEARS REFERENCES IN EXPENSES.
+        Log.d(TAG, "Deleting budget category id=$categoryId for userId=$userId")
         ensureValidUser(userId)
         val userDoc = userDocument(userId)
-        firestore.runTransaction { transaction ->
-            val categoryRef = userDoc.collection(COLLECTION_CATEGORIES).document(categoryId.toString())
-            transaction.delete(categoryRef)
-        }.await()
-        val expensesSnapshot = userDoc
-            .collection(COLLECTION_EXPENSES)
-            .whereEqualTo(FIELD_CATEGORY_ID, categoryId)
-            .get()
-            .await()
-        expensesSnapshot.documents.forEach { document ->
-            document.reference.update(FIELD_CATEGORY_ID, null).await()
+        try {
+            firestore.runTransaction { transaction ->
+                val categoryRef = userDoc.collection(COLLECTION_CATEGORIES).document(categoryId.toString())
+                Log.d(TAG, "Transaction deleting category doc=${categoryRef.path}")
+                transaction.delete(categoryRef)
+            }.await()
+            val expensesSnapshot = userDoc
+                .collection(COLLECTION_EXPENSES)
+                .whereEqualTo(FIELD_CATEGORY_ID, categoryId)
+                .get()
+                .await()
+            Log.d(TAG, "Found ${expensesSnapshot.size()} expenses referencing categoryId=$categoryId for cleanup")
+            expensesSnapshot.documents.forEach { document ->
+                Log.d(TAG, "Clearing category reference from expense doc=${document.reference.path}")
+                document.reference.update(FIELD_CATEGORY_ID, null).await()
+            }
+            Log.d(TAG, "Deleted budget category id=$categoryId for userId=$userId")
+        } catch (ex: Exception) {
+            Log.e(TAG, "Failed to delete budget category id=$categoryId for userId=$userId", ex)
+            throw ex
         }
     }
 
     suspend fun getExpenses(userId: Long): List<Expense> = withContext(Dispatchers.IO) {
         // RETRIEVES ALL EXPENSES BELONGING TO THE USER FROM FIRESTORE.
+        Log.d(TAG, "Fetching expenses for userId=$userId")
         ensureValidUser(userId)
-        val snapshot = userDocument(userId)
-            .collection(COLLECTION_EXPENSES)
-            .get()
-            .await()
-        snapshot.documents.mapNotNull { it.toExpense(userId) }
-            .sortedWith(compareByDescending<Expense> { it.createdAtEpochMillis }.thenByDescending { it.dateIso })
+        return@withContext try {
+            val snapshot = userDocument(userId)
+                .collection(COLLECTION_EXPENSES)
+                .get()
+                .await()
+            val expenses = snapshot.documents.mapNotNull { it.toExpense(userId) }
+                .sortedWith(compareByDescending<Expense> { it.createdAtEpochMillis }.thenByDescending { it.dateIso })
+            Log.d(TAG, "Fetched ${expenses.size} expenses for userId=$userId")
+            expenses
+        } catch (ex: Exception) {
+            Log.e(TAG, "Failed to fetch expenses for userId=$userId", ex)
+            throw ex
+        }
     }
 
     suspend fun createExpense(
@@ -125,114 +176,177 @@ class OinkonomicsRepository(context: Context) {
         receiptUri: String?
     ): Expense = withContext(Dispatchers.IO) {
         // RECORDS A NEW EXPENSE DOCUMENT AND UPDATES THE CATEGORY TOTALS.
+        Log.d(TAG, "Creating expense for userId=$userId categoryId=$categoryId name=$name amount=$amount date=$date receiptUri=$receiptUri")
         ensureValidUser(userId)
         val userDoc = userDocument(userId)
-        val expenseId = generateStableId()
-        val createdAt = System.currentTimeMillis()
-        val expense = Expense(
-            id = expenseId,
-            userId = userId,
-            categoryId = categoryId,
-            name = name,
-            amount = amount,
-            dateIso = date.toString(),
-            receiptUri = receiptUri,
-            createdAtEpochMillis = createdAt
-        )
-        firestore.runTransaction { transaction ->
-            val expenseRef = userDoc.collection(COLLECTION_EXPENSES).document(expenseId.toString())
-            transaction.set(expenseRef, expense.toMap())
-            transaction.adjustCategorySpent(userDoc, categoryId, amount)
-        }.await()
-        expense
+        return@withContext try {
+            val expenseId = generateStableId()
+            val createdAt = System.currentTimeMillis()
+            val expense = Expense(
+                id = expenseId,
+                userId = userId,
+                categoryId = categoryId,
+                name = name,
+                amount = amount,
+                dateIso = date.toString(),
+                receiptUri = receiptUri,
+                createdAtEpochMillis = createdAt
+            )
+            firestore.runTransaction { transaction ->
+                val expenseRef = userDoc.collection(COLLECTION_EXPENSES).document(expenseId.toString())
+                Log.d(TAG, "Transaction creating expense doc=${expenseRef.path}")
+                transaction.set(expenseRef, expense.toMap())
+                transaction.adjustCategorySpent(userDoc, categoryId, amount)
+            }.await()
+            Log.d(TAG, "Created expense id=$expenseId for userId=$userId")
+            expense
+        } catch (ex: Exception) {
+            Log.e(TAG, "Failed to create expense for userId=$userId", ex)
+            throw ex
+        }
     }
 
     suspend fun updateExpense(expense: Expense): Boolean = withContext(Dispatchers.IO) {
         // APPLIES CHANGES TO AN EXISTING EXPENSE AND ADJUSTS CATEGORY TOTALS.
+        Log.d(TAG, "Updating expense id=${expense.id} for userId=${expense.userId}")
         ensureValidUser(expense.userId)
         val userDoc = userDocument(expense.userId)
-        val existing = getExpense(expense.id, expense.userId) ?: return@withContext false
-        firestore.runTransaction { transaction ->
-            val expenseRef = userDoc.collection(COLLECTION_EXPENSES).document(expense.id.toString())
-            val snapshot = transaction.get(expenseRef)
-            if (!snapshot.exists()) {
-                return@runTransaction false
-            }
-            transaction.set(expenseRef, expense.toMap(), SetOptions.merge())
-            if (existing.categoryId != expense.categoryId) {
-                transaction.adjustCategorySpent(userDoc, existing.categoryId, -existing.amount)
-                transaction.adjustCategorySpent(userDoc, expense.categoryId, expense.amount)
-            } else {
-                val delta = expense.amount - existing.amount
-                if (delta != 0.0) {
-                    transaction.adjustCategorySpent(userDoc, expense.categoryId, delta)
+        val existing = getExpense(expense.id, expense.userId) ?: run {
+            Log.w(TAG, "Cannot update expense id=${expense.id}; original document missing for userId=${expense.userId}")
+            return@withContext false
+        }
+        return@withContext try {
+            val result = firestore.runTransaction { transaction ->
+                val expenseRef = userDoc.collection(COLLECTION_EXPENSES).document(expense.id.toString())
+                Log.d(TAG, "Transaction updating expense doc=${expenseRef.path}")
+                val snapshot = transaction.get(expenseRef)
+                if (!snapshot.exists()) {
+                    Log.w(TAG, "Expense document ${expenseRef.path} missing during update")
+                    return@runTransaction false
                 }
-            }
-            true
-        }.await()
+                transaction.set(expenseRef, expense.toMap(), SetOptions.merge())
+                if (existing.categoryId != expense.categoryId) {
+                    Log.d(TAG, "Expense category changed from ${existing.categoryId} to ${expense.categoryId}")
+                    transaction.adjustCategorySpent(userDoc, existing.categoryId, -existing.amount)
+                    transaction.adjustCategorySpent(userDoc, expense.categoryId, expense.amount)
+                } else {
+                    val delta = expense.amount - existing.amount
+                    if (delta != 0.0) {
+                        Log.d(TAG, "Adjusting category spend by delta=$delta for categoryId=${expense.categoryId}")
+                        transaction.adjustCategorySpent(userDoc, expense.categoryId, delta)
+                    }
+                }
+                true
+            }.await()
+            Log.d(TAG, "Updated expense id=${expense.id} for userId=${expense.userId} result=$result")
+            result
+        } catch (ex: Exception) {
+            Log.e(TAG, "Failed to update expense id=${expense.id} for userId=${expense.userId}", ex)
+            throw ex
+        }
     }
 
     suspend fun deleteExpense(expenseId: Long, userId: Long): Boolean = withContext(Dispatchers.IO) {
         // REMOVES AN EXPENSE DOCUMENT AND DEDUCTS ITS CATEGORY SPEND.
+        Log.d(TAG, "Deleting expense id=$expenseId for userId=$userId")
         ensureValidUser(userId)
         val userDoc = userDocument(userId)
-        firestore.runTransaction { transaction ->
-            val expenseRef = userDoc.collection(COLLECTION_EXPENSES).document(expenseId.toString())
-            val snapshot = transaction.get(expenseRef)
-            if (!snapshot.exists()) {
-                return@runTransaction false
-            }
-            val expense = snapshot.toExpense(userId) ?: return@runTransaction false
-            transaction.delete(expenseRef)
-            transaction.adjustCategorySpent(userDoc, expense.categoryId, -expense.amount)
-            true
-        }.await()
+        return@withContext try {
+            val result = firestore.runTransaction { transaction ->
+                val expenseRef = userDoc.collection(COLLECTION_EXPENSES).document(expenseId.toString())
+                Log.d(TAG, "Transaction deleting expense doc=${expenseRef.path}")
+                val snapshot = transaction.get(expenseRef)
+                if (!snapshot.exists()) {
+                    Log.w(TAG, "Expense document ${expenseRef.path} not found during delete")
+                    return@runTransaction false
+                }
+                val expense = snapshot.toExpense(userId) ?: run {
+                    Log.w(TAG, "Unable to parse expense snapshot for doc=${expenseRef.path}")
+                    return@runTransaction false
+                }
+                transaction.delete(expenseRef)
+                transaction.adjustCategorySpent(userDoc, expense.categoryId, -expense.amount)
+                true
+            }.await()
+            Log.d(TAG, "Deleted expense id=$expenseId for userId=$userId result=$result")
+            result
+        } catch (ex: Exception) {
+            Log.e(TAG, "Failed to delete expense id=$expenseId for userId=$userId", ex)
+            throw ex
+        }
     }
 
     suspend fun registerUser(username: String, password: String): Result<Long> = withContext(Dispatchers.IO) {
         // CREATES A USER DOCUMENT IF THE NAME IS AVAILABLE.
-        val existingUser = usersCollection
-            .whereEqualTo(FIELD_USERNAME, username)
-            .limit(1)
-            .get()
-            .await()
-        if (!existingUser.isEmpty) {
-            return@withContext Result.failure(IllegalStateException("Username already taken"))
+        Log.d(TAG, "Registering new user with username=$username")
+        return@withContext try {
+            val existingUser = usersCollection
+                .whereEqualTo(FIELD_USERNAME, username)
+                .limit(1)
+                .get()
+                .await()
+            if (!existingUser.isEmpty) {
+                Log.w(TAG, "Registration failed: username already taken for username=$username")
+                return@withContext Result.failure(IllegalStateException("Username already taken"))
+            }
+            val hashed = password.sha256()
+            var userId: Long
+            do {
+                userId = generateStableId()
+                val doc = userDocument(userId).get().await()
+                Log.d(TAG, "Generated candidate userId=$userId exists=${doc.exists()}")
+            } while (doc.exists())
+            val userData = mapOf(
+                FIELD_ID to userId,
+                FIELD_USERNAME to username,
+                FIELD_PASSWORD to hashed
+            )
+            userDocument(userId).set(userData).await()
+            Log.d(TAG, "Registered new userId=$userId for username=$username")
+            Result.success(userId)
+        } catch (ex: Exception) {
+            Log.e(TAG, "Failed to register username=$username", ex)
+            throw ex
         }
-        val hashed = password.sha256()
-        var userId: Long
-        do {
-            userId = generateStableId()
-            val doc = userDocument(userId).get().await()
-        } while (doc.exists())
-        val userData = mapOf(
-            FIELD_ID to userId,
-            FIELD_USERNAME to username,
-            FIELD_PASSWORD to hashed
-        )
-        userDocument(userId).set(userData).await()
-        Result.success(userId)
     }
 
     suspend fun authenticate(username: String, password: String): Long? = withContext(Dispatchers.IO) {
         // LOOKS UP A USER MATCHING THE PROVIDED CREDENTIALS IN FIRESTORE.
-        val snapshot = usersCollection
-            .whereEqualTo(FIELD_USERNAME, username)
-            .whereEqualTo(FIELD_PASSWORD, password.sha256())
-            .limit(1)
-            .get()
-            .await()
-        val document = snapshot.documents.firstOrNull() ?: return@withContext null
-        (document.getLong(FIELD_ID) ?: document.id.toLongOrNull())
+        Log.d(TAG, "Authenticating username=$username")
+        return@withContext try {
+            val snapshot = usersCollection
+                .whereEqualTo(FIELD_USERNAME, username)
+                .whereEqualTo(FIELD_PASSWORD, password.sha256())
+                .limit(1)
+                .get()
+                .await()
+            val document = snapshot.documents.firstOrNull() ?: run {
+                Log.w(TAG, "Authentication failed: no matching user for username=$username")
+                return@withContext null
+            }
+            val id = document.getLong(FIELD_ID) ?: document.id.toLongOrNull()
+            Log.d(TAG, "Authentication succeeded for username=$username resolvedUserId=$id")
+            id
+        } catch (ex: Exception) {
+            Log.e(TAG, "Authentication error for username=$username", ex)
+            throw ex
+        }
     }
 
     private suspend fun getExpense(expenseId: Long, userId: Long): Expense? {
+        Log.d(TAG, "Fetching single expense id=$expenseId for userId=$userId")
         val snapshot = userDocument(userId)
             .collection(COLLECTION_EXPENSES)
             .document(expenseId.toString())
             .get()
             .await()
-        return if (snapshot.exists()) snapshot.toExpense(userId) else null
+        return if (snapshot.exists()) {
+            Log.d(TAG, "Expense snapshot found for id=$expenseId userId=$userId")
+            snapshot.toExpense(userId)
+        } else {
+            Log.w(TAG, "Expense snapshot missing for id=$expenseId userId=$userId")
+            null
+        }
     }
 
     private fun String.sha256(): String {
@@ -244,10 +358,13 @@ class OinkonomicsRepository(context: Context) {
 
     private suspend fun ensureValidUser(userId: Long) {
         // THROWS IF THE TARGET USER CANNOT BE FOUND IN FIRESTORE.
+        Log.d(TAG, "Verifying existence of userId=$userId")
         val exists = userDocument(userId).get().await().exists()
         if (!exists) {
+            Log.e(TAG, "UserId=$userId does not exist in Firestore")
             throw MissingUserException()
         }
+        Log.d(TAG, "Verified userId=$userId exists")
     }
 
     private fun userDocument(userId: Long): DocumentReference =
@@ -333,17 +450,24 @@ class OinkonomicsRepository(context: Context) {
         categoryId: Long?,
         delta: Double
     ) {
-        if (categoryId == null || delta == 0.0) return
+        if (categoryId == null || delta == 0.0) {
+            Log.d(TAG, "Skipping category spend adjustment. categoryId=$categoryId delta=$delta")
+            return
+        }
         val categoryRef = userDoc.collection(COLLECTION_CATEGORIES).document(categoryId.toString())
         val snapshot = get(categoryRef)
         if (snapshot.exists()) {
             val current = snapshot.getNumeric(FIELD_SPENT_AMOUNT) ?: 0.0
             val updated = max(0.0, current + delta)
+            Log.d(TAG, "Adjusting category spend for doc=${categoryRef.path} current=$current delta=$delta updated=$updated")
             update(categoryRef, FIELD_SPENT_AMOUNT, updated)
+        } else {
+            Log.w(TAG, "Cannot adjust spend: category document missing for doc=${categoryRef.path}")
         }
     }
 
     companion object {
+        private const val TAG = "OinkonomicsRepository"
         private const val COLLECTION_USERS = "users"
         private const val COLLECTION_CATEGORIES = "categories"
         private const val COLLECTION_EXPENSES = "expenses"
