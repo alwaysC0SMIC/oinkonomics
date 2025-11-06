@@ -9,39 +9,83 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <EditText
-            android:id="@+id/input_expense_name"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Expense name"
-            android:inputType="textCapSentences"
-            android:maxLines="1" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <TextView
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:text="Name" />
+            <EditText
+                android:id="@+id/input_expense_name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint=""
+                android:inputType="textCapSentences"
+                android:maxLines="1" />
+        </LinearLayout>
 
-        <EditText
-            android:id="@+id/input_expense_date"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:focusable="false"
-            android:hint="Date"
-            android:inputType="date"
-            android:maxLines="1"
-            android:clickable="true" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <TextView
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:text="Date" />
+            <EditText
+                android:id="@+id/input_expense_date"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:focusable="false"
+                android:hint=""
+                android:inputType="date"
+                android:maxLines="1"
+                android:clickable="true" />
+        </LinearLayout>
 
-        <Spinner
-            android:id="@+id/input_expense_category"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp" />
-
-        <EditText
-            android:id="@+id/input_expense_amount"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:hint="Amount"
-            android:inputType="numberDecimal"
-            android:maxLines="1" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <TextView
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:text="Category" />
+            <Spinner
+                android:id="@+id/input_expense_category"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <TextView
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:text="Amount" />
+            <EditText
+                android:id="@+id/input_expense_amount"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint=""
+                android:inputType="numberDecimal"
+                android:maxLines="1" />
+        </LinearLayout>
 
         <ImageView
             android:id="@+id/receipt_preview"

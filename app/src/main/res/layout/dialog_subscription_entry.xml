@@ -5,25 +5,60 @@
 	android:orientation="vertical"
 	android:padding="16dp">
 
-	<EditText
-		android:id="@+id/input_subscription_name"
+	<LinearLayout
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
-		android:hint="Name" />
+		android:orientation="horizontal"
+		android:gravity="center_vertical">
+		<TextView
+			android:layout_width="100dp"
+			android:layout_height="wrap_content"
+			android:text="Name" />
+		<EditText
+			android:id="@+id/input_subscription_name"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:hint="" />
+	</LinearLayout>
 
-	<EditText
-		android:id="@+id/input_subscription_amount"
+	<LinearLayout
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
-		android:hint="Amount"
-		android:inputType="numberDecimal" />
+		android:orientation="horizontal"
+		android:gravity="center_vertical"
+		android:layout_marginTop="12dp">
+		<TextView
+			android:layout_width="100dp"
+			android:layout_height="wrap_content"
+			android:text="Amount" />
+		<EditText
+			android:id="@+id/input_subscription_amount"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:hint=""
+			android:inputType="numberDecimal" />
+	</LinearLayout>
 
-	<EditText
-		android:id="@+id/input_subscription_date"
+	<LinearLayout
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
-		android:focusable="false"
-		android:hint="Date" />
+		android:orientation="horizontal"
+		android:gravity="center_vertical"
+		android:layout_marginTop="12dp">
+		<TextView
+			android:layout_width="100dp"
+			android:layout_height="wrap_content"
+			android:text="Date" />
+		<EditText
+			android:id="@+id/input_subscription_date"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:focusable="false"
+			android:hint="" />
+	</LinearLayout>
 
 	<ImageView
 		android:id="@+id/icon_preview"

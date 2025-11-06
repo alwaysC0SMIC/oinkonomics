@@ -19,7 +19,7 @@
             android:id="@+id/edit_text_category_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="e.g., Groceries"
+            android:hint=""
             android:inputType="textCapWords" />
 
         <TextView
@@ -33,7 +33,7 @@
             android:id="@+id/edit_text_max_amount"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="e.g., 5000"
+            android:hint=""
             android:inputType="numberDecimal" />
 
         <TextView
@@ -47,7 +47,7 @@
             android:id="@+id/edit_text_spent_amount"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="e.g., 1500"
+            android:hint=""
             android:inputType="numberDecimal" />
 
         <Button
