@@ -33,163 +33,65 @@
             android:gravity="center"
             android:orientation="vertical">
 
-            <!-- Profile Picture -->
-            <View
-                android:layout_width="176dp"
-                android:layout_height="178dp"
-                android:layout_marginBottom="16dp"
-                android:background="@drawable/circle_gray" />
+            <!-- Profile Picture Container -->
+            <RelativeLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp">
 
-        </LinearLayout>
+                <!-- Profile Picture -->
+                <ImageView
+                    android:id="@+id/profile_picture"
+                    android:layout_width="176dp"
+                    android:layout_height="176dp"
+                    android:background="@drawable/circle_gray"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="Profile picture"
+                    android:padding="4dp" />
 
-        <!-- Menu Items -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
+                <!-- Edit Profile Picture Button -->
+                <ImageButton
+                    android:id="@+id/edit_profile_picture_button"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:layout_alignBottom="@id/profile_picture"
+                    android:layout_alignEnd="@id/profile_picture"
+                    android:layout_marginEnd="-8dp"
+                    android:layout_marginBottom="-8dp"
+                    android:background="@drawable/circle_button_background"
+                    android:src="@drawable/ic_edit_black_24dp"
+                    android:contentDescription="Edit profile picture"
+                    android:padding="14dp"
+                    android:scaleType="centerInside"
+                    android:elevation="4dp"
+                    android:adjustViewBounds="true" />
 
-            <!-- Profile -->
-            <LinearLayout
+            </RelativeLayout>
+
+            <!-- Name Label -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="Name"
+                android:textColor="#666666"
+                android:textSize="14sp" />
+
+            <!-- User Name Field -->
+            <EditText
+                android:id="@+id/user_name"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:background="@drawable/card_background"
-                android:elevation="8dp"
-                android:orientation="horizontal"
-                android:padding="16dp">
-
-                <View
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginEnd="16dp"
-                    android:background="@drawable/circle_gray" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_vertical"
-                    android:layout_weight="1"
-                    android:text="Profile"
-                    android:textColor="#333333"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_vertical"
-                    android:text="▷"
-                    android:textColor="#666666"
-                    android:textSize="18sp" />
-
-            </LinearLayout>
-
-            <!-- Security -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:background="@drawable/card_background"
-                android:elevation="8dp"
-                android:orientation="horizontal"
-                android:padding="16dp">
-
-                <View
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginEnd="16dp"
-                    android:background="@drawable/circle_gray" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_vertical"
-                    android:layout_weight="1"
-                    android:text="Security"
-                    android:textColor="#333333"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_vertical"
-                    android:text="▷"
-                    android:textColor="#666666"
-                    android:textSize="18sp" />
-
-            </LinearLayout>
-
-            <!-- Connections -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:background="@drawable/card_background"
-                android:elevation="8dp"
-                android:orientation="horizontal"
-                android:padding="16dp">
-
-                <View
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginEnd="16dp"
-                    android:background="@drawable/circle_gray" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_vertical"
-                    android:layout_weight="1"
-                    android:text="Connections"
-                    android:textColor="#333333"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_vertical"
-                    android:text="▷"
-                    android:textColor="#666666"
-                    android:textSize="18sp" />
-
-            </LinearLayout>
-
-            <!-- Settings -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/card_background"
-                android:elevation="8dp"
-                android:orientation="horizontal"
-                android:padding="16dp">
-
-                <View
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginEnd="16dp"
-                    android:background="@drawable/circle_gray" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_vertical"
-                    android:layout_weight="1"
-                    android:text="Settings"
-                    android:textColor="#333333"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_vertical"
-                    android:text="▷"
-                    android:textColor="#666666"
-                    android:textSize="18sp" />
-
-            </LinearLayout>
+                android:layout_marginHorizontal="32dp"
+                android:gravity="center"
+                android:hint="Enter your name"
+                android:textColor="#333333"
+                android:textColorHint="#999999"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:background="@android:color/transparent"
+                android:inputType="textPersonName"
+                android:maxLines="1" />
 
         </LinearLayout>
 
