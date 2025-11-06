@@ -1,5 +1,6 @@
 package com.example.oinkonomics.ui.dashboard
 
+import android.app.DatePickerDialog
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -20,6 +21,9 @@ import com.example.oinkonomics.data.BudgetCategory
 import com.example.oinkonomics.data.MissingUserException
 import com.example.oinkonomics.data.OinkonomicsRepository
 import com.example.oinkonomics.data.SessionManager
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlinx.coroutines.launch
 
 // MANAGES THE DASHBOARD OF BUDGET CATEGORIES AND TOTALS.
@@ -40,6 +44,14 @@ class DashboardFragment : Fragment() {
     private lateinit var sessionManager: SessionManager
     private var userId: Long? = null
     private var uncategorizedSpent: Double = 0.0
+    private var dateRangeStart: LocalDate? = null
+    private var dateRangeEnd: LocalDate? = null
+    
+    private lateinit var dateRangeStartView: TextView
+    private lateinit var dateRangeEndView: TextView
+    private lateinit var dateRangeClearView: TextView
+    
+    private val dayFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.getDefault())
 
     private val categoryColors by lazy {
         listOf(
@@ -77,6 +89,10 @@ class DashboardFragment : Fragment() {
         totalSpentTextView = root.findViewById(R.id.total_spent_text)
         totalLeftTextView = root.findViewById(R.id.total_left_text)
         totalProgressBar = root.findViewById(R.id.total_progress_bar)
+        
+        dateRangeStartView = root.findViewById(R.id.date_range_start)
+        dateRangeEndView = root.findViewById(R.id.date_range_end)
+        dateRangeClearView = root.findViewById(R.id.date_range_clear)
 
         addCategoryButton = layoutInflater.inflate(
             R.layout.item_add_category,
@@ -84,6 +100,9 @@ class DashboardFragment : Fragment() {
             false
         ) as SquareLinearLayout
         configureAddButton()
+        
+        setupDateRangeSelector()
+        updateDateRangeDisplay()
 
         loadCategories()
 
@@ -105,6 +124,85 @@ class DashboardFragment : Fragment() {
         ring.setColors(neutralColor)
         ring.setProgress(0f, 1f)
         addCategoryButton.setOnClickListener { showAddCategoryDialog() }
+    }
+
+    private fun setupDateRangeSelector() {
+        // SETS UP THE DATE RANGE SELECTOR UI.
+        dateRangeStartView.setOnClickListener {
+            showDatePicker(true)
+        }
+        dateRangeEndView.setOnClickListener {
+            showDatePicker(false)
+        }
+        dateRangeClearView.setOnClickListener {
+            dateRangeStart = null
+            dateRangeEnd = null
+            updateDateRangeDisplay()
+            loadCategories()
+        }
+    }
+
+    private fun updateDateRangeDisplay() {
+        // UPDATES THE DATE RANGE DISPLAY TEXT.
+        if (dateRangeStart != null) {
+            dateRangeStartView.text = dateRangeStart!!.format(dayFormatter)
+        } else {
+            dateRangeStartView.text = "Start Date"
+        }
+        
+        if (dateRangeEnd != null) {
+            dateRangeEndView.text = dateRangeEnd!!.format(dayFormatter)
+        } else {
+            dateRangeEndView.text = "End Date"
+        }
+        
+        // SHOW CLEAR BUTTON IF EITHER DATE IS SET
+        dateRangeClearView.visibility = if (dateRangeStart != null || dateRangeEnd != null) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
+    }
+
+    private fun showDatePicker(isStartDate: Boolean) {
+        // SHOWS A DATE PICKER FOR SELECTING START OR END DATE.
+        val currentDate = if (isStartDate) {
+            dateRangeStart ?: dateRangeEnd ?: LocalDate.now()
+        } else {
+            dateRangeEnd ?: dateRangeStart ?: LocalDate.now()
+        }
+        
+        DatePickerDialog(
+            requireContext(),
+            { _, year, month, dayOfMonth ->
+                val selectedDate = LocalDate.of(year, month + 1, dayOfMonth)
+                
+                if (isStartDate) {
+                    // VALIDATE: START DATE SHOULD BE <= END DATE
+                    val newEnd = if (dateRangeEnd != null && selectedDate.isAfter(dateRangeEnd!!)) {
+                        selectedDate
+                    } else {
+                        dateRangeEnd
+                    }
+                    dateRangeStart = selectedDate
+                    dateRangeEnd = newEnd
+                } else {
+                    // VALIDATE: END DATE SHOULD BE >= START DATE
+                    val newStart = if (dateRangeStart != null && selectedDate.isBefore(dateRangeStart!!)) {
+                        selectedDate
+                    } else {
+                        dateRangeStart
+                    }
+                    dateRangeStart = newStart
+                    dateRangeEnd = selectedDate
+                }
+                updateDateRangeDisplay()
+                loadCategories()
+            },
+            currentDate.year,
+            currentDate.monthValue - 1,
+            currentDate.dayOfMonth
+        ).show()
     }
 
     private fun showAddCategoryDialog() {
@@ -306,8 +404,31 @@ class DashboardFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val categories = repository.getBudgetCategories(currentUserId).toMutableList()
-                val expenses = repository.getExpenses(currentUserId)
-                uncategorizedSpent = expenses.filter { it.categoryId == null }.sumOf { it.amount }
+                val allExpenses = repository.getExpenses(currentUserId)
+                
+                // FILTER EXPENSES BY DATE RANGE
+                val filteredExpenses = allExpenses.filter { expense ->
+                    val expenseDate = expense.localDate
+                    when {
+                        dateRangeStart != null && dateRangeEnd != null -> {
+                            !expenseDate.isBefore(dateRangeStart!!) && !expenseDate.isAfter(dateRangeEnd!!)
+                        }
+                        dateRangeStart != null -> !expenseDate.isBefore(dateRangeStart!!)
+                        dateRangeEnd != null -> !expenseDate.isAfter(dateRangeEnd!!)
+                        else -> true
+                    }
+                }
+                
+                // CALCULATE SPENT AMOUNTS PER CATEGORY FROM FILTERED EXPENSES
+                categories.forEach { category ->
+                    val categorySpent = filteredExpenses
+                        .filter { it.categoryId == category.id }
+                        .sumOf { it.amount }
+                    category.spentAmount = categorySpent
+                }
+                
+                uncategorizedSpent = filteredExpenses.filter { it.categoryId == null }.sumOf { it.amount }
+                
                 if (categories.isEmpty()) {
                     val defaultCategory = repository.createBudgetCategory(
                         currentUserId,
