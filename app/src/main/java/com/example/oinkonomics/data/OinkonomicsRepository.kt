@@ -6,6 +6,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.Transaction
@@ -647,6 +648,55 @@ class OinkonomicsRepository(context: Context) {
         true
     }
 
+    suspend fun getMonthlySpendingGoal(userId: Long): MonthlySpendingGoal? = withContext(Dispatchers.IO) {
+        // RETRIEVES THE USER'S MONTHLY SPENDING GOALS FROM THE USER DOCUMENT.
+        Log.d(TAG, "Fetching monthly spending goal for userId=$userId")
+        ensureValidUser(userId)
+        return@withContext try {
+            val snapshot = userDocument(userId).get().await()
+            if (!snapshot.exists()) {
+                Log.w(TAG, "User document missing for userId=$userId")
+                return@withContext null
+            }
+            val minGoal = snapshot.getNumeric(FIELD_MONTHLY_MIN_GOAL)
+            val maxGoal = snapshot.getNumeric(FIELD_MONTHLY_MAX_GOAL)
+            MonthlySpendingGoal(
+                userId = userId,
+                minGoal = minGoal,
+                maxGoal = maxGoal
+            )
+        } catch (ex: Exception) {
+            Log.e(TAG, "Failed to fetch monthly spending goal for userId=$userId", ex)
+            throw ex
+        }
+    }
+
+    suspend fun setMonthlySpendingGoal(userId: Long, minGoal: Double?, maxGoal: Double?): Boolean = withContext(Dispatchers.IO) {
+        // UPDATES THE USER'S MONTHLY SPENDING GOALS IN THE USER DOCUMENT.
+        Log.d(TAG, "Setting monthly spending goal for userId=$userId minGoal=$minGoal maxGoal=$maxGoal")
+        ensureValidUser(userId)
+        return@withContext try {
+            val userRef = userDocument(userId)
+            val updates = mutableMapOf<String, Any>()
+            if (minGoal != null) {
+                updates[FIELD_MONTHLY_MIN_GOAL] = minGoal
+            } else {
+                updates[FIELD_MONTHLY_MIN_GOAL] = FieldValue.delete()
+            }
+            if (maxGoal != null) {
+                updates[FIELD_MONTHLY_MAX_GOAL] = maxGoal
+            } else {
+                updates[FIELD_MONTHLY_MAX_GOAL] = FieldValue.delete()
+            }
+            userRef.update(updates).await()
+            Log.d(TAG, "Updated monthly spending goal for userId=$userId")
+            true
+        } catch (ex: Exception) {
+            Log.e(TAG, "Failed to set monthly spending goal for userId=$userId", ex)
+            throw ex
+        }
+    }
+
     private fun DocumentSnapshot.getNumeric(fieldName: String): Double? {
         val value = get(fieldName) ?: return null
         return when (value) {
@@ -701,5 +751,7 @@ class OinkonomicsRepository(context: Context) {
         private const val FIELD_TOTAL_AMOUNT = "totalAmount"
         private const val FIELD_PAID_AMOUNT = "paidAmount"
         private const val FIELD_DUE_DATE_ISO = "dueDateIso"
+        private const val FIELD_MONTHLY_MIN_GOAL = "monthlyMinGoal"
+        private const val FIELD_MONTHLY_MAX_GOAL = "monthlyMaxGoal"
     }
 }

@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.example.oinkonomics.data.BudgetCategory
 import com.example.oinkonomics.data.Expense
 import com.example.oinkonomics.data.MissingUserException
+import com.example.oinkonomics.data.MonthlySpendingGoal
 import com.example.oinkonomics.data.OinkonomicsRepository
 import java.time.LocalDate
+import java.time.YearMonth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -20,6 +22,10 @@ data class HomeUiState(
     val categories: List<BudgetCategory> = emptyList(),
     val totalBudget: Double = 0.0,
     val totalSpent: Double = 0.0,
+    val monthlyGoal: MonthlySpendingGoal? = null,
+    val currentMonthSpent: Double = 0.0,
+    val dateRangeStart: LocalDate? = null,
+    val dateRangeEnd: LocalDate? = null,
     val errorMessage: String? = null,
     val sessionExpired: Boolean = false
 )
@@ -46,14 +52,24 @@ class HomeViewModel(
             try {
                 val categories = repository.getBudgetCategories(userId)
                 val expenses = repository.getExpenses(userId)
+                val monthlyGoal = repository.getMonthlySpendingGoal(userId)
                 val totalBudget = categories.sumOf { it.maxAmount }
                 val totalSpent = expenses.sumOf { it.amount }
+                
+                // CALCULATE CURRENT MONTH SPENDING
+                val currentMonth = YearMonth.now()
+                val currentMonthSpent = expenses
+                    .filter { YearMonth.from(it.localDate) == currentMonth }
+                    .sumOf { it.amount }
+                
                 _uiState.value = HomeUiState(
                     isLoading = false,
                     expenses = expenses,
                     categories = categories,
                     totalBudget = totalBudget,
                     totalSpent = totalSpent,
+                    monthlyGoal = monthlyGoal,
+                    currentMonthSpent = currentMonthSpent,
                     errorMessage = null,
                     sessionExpired = false
                 )
@@ -161,6 +177,36 @@ class HomeViewModel(
                 }
             }
         }
+    }
+
+    fun setMonthlyGoal(minGoal: Double?, maxGoal: Double?) {
+        // UPDATES THE USER'S MONTHLY SPENDING GOALS.
+        if (userId < 0) return
+        viewModelScope.launch {
+            try {
+                val success = repository.setMonthlySpendingGoal(userId, minGoal, maxGoal)
+                if (success) {
+                    refreshData()
+                } else {
+                    _uiState.update {
+                        it.copy(errorMessage = "Unable to set monthly goal", sessionExpired = false)
+                    }
+                }
+            } catch (ex: MissingUserException) {
+                _uiState.update {
+                    it.copy(errorMessage = ex.message, sessionExpired = true)
+                }
+            } catch (ex: Exception) {
+                _uiState.update {
+                    it.copy(errorMessage = ex.message ?: "Unable to set monthly goal", sessionExpired = false)
+                }
+            }
+        }
+    }
+
+    fun setDateRange(startDate: LocalDate?, endDate: LocalDate?) {
+        // SETS THE DATE RANGE FOR FILTERING EXPENSES.
+        _uiState.update { it.copy(dateRangeStart = startDate, dateRangeEnd = endDate) }
     }
 
     fun onSessionInvalidHandled() {

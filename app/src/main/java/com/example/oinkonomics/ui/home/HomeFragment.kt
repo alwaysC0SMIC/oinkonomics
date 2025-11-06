@@ -28,6 +28,7 @@ import com.example.oinkonomics.R
 import com.example.oinkonomics.auth.AuthActivity
 import com.example.oinkonomics.data.BudgetCategory
 import com.example.oinkonomics.data.Expense
+import com.example.oinkonomics.data.MonthlySpendingGoal
 import com.example.oinkonomics.data.OinkonomicsRepository
 import com.example.oinkonomics.data.SessionManager
 import com.example.oinkonomics.databinding.FragmentHomeBinding
@@ -93,6 +94,8 @@ class HomeFragment : Fragment() {
         // INFLATES THE LAYOUT AND PREPARES LIST AND OBSERVERS.
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         setupRecyclerView()
+        setupMonthlyGoalsEditButton()
+        setupDateRangeSelector()
         observeViewModel()
         return binding.root
     }
@@ -149,7 +152,9 @@ class HomeFragment : Fragment() {
                         return@collect
                     }
                     updateHeader(state.totalSpent, state.totalBudget)
-                    renderExpenses(state.expenses, state.categories)
+                    updateMonthlyGoals(state.monthlyGoal, state.currentMonthSpent)
+                    updateDateRangeDisplay(state.dateRangeStart, state.dateRangeEnd)
+                    renderExpenses(state.expenses, state.categories, state.dateRangeStart, state.dateRangeEnd)
                 }
             }
         }
@@ -170,10 +175,204 @@ class HomeFragment : Fragment() {
         binding.totalLeftLabel.text = getString(R.string.home_total_left_value, formatCurrency(remaining))
     }
 
-    private fun renderExpenses(expenses: List<Expense>, categories: List<BudgetCategory>) {
-        // BUILDS A GROUPED LIST OF MONTH HEADERS AND EXPENSES.
+    private fun setupMonthlyGoalsEditButton() {
+        // SETS UP THE EDIT BUTTON FOR MONTHLY GOALS.
+        binding.monthlyGoalsEditButton.setOnClickListener {
+            showMonthlyGoalsDialog()
+        }
+    }
+
+    private fun setupDateRangeSelector() {
+        // SETS UP THE DATE RANGE SELECTOR UI.
+        binding.dateRangeStart.setOnClickListener {
+            showDatePicker(true)
+        }
+        binding.dateRangeEnd.setOnClickListener {
+            showDatePicker(false)
+        }
+        binding.dateRangeClear.setOnClickListener {
+            viewModel.setDateRange(null, null)
+        }
+    }
+
+    private fun updateDateRangeDisplay(startDate: LocalDate?, endDate: LocalDate?) {
+        // UPDATES THE DATE RANGE DISPLAY TEXT.
+        if (startDate != null) {
+            binding.dateRangeStart.text = startDate.format(dayFormatter)
+        } else {
+            binding.dateRangeStart.text = "Start Date"
+        }
+        
+        if (endDate != null) {
+            binding.dateRangeEnd.text = endDate.format(dayFormatter)
+        } else {
+            binding.dateRangeEnd.text = "End Date"
+        }
+        
+        // SHOW CLEAR BUTTON IF EITHER DATE IS SET
+        binding.dateRangeClear.visibility = if (startDate != null || endDate != null) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
+    }
+
+    private fun showDatePicker(isStartDate: Boolean) {
+        // SHOWS A DATE PICKER FOR SELECTING START OR END DATE.
+        val currentState = viewModel.uiState.value
+        val currentDate = if (isStartDate) {
+            currentState.dateRangeStart ?: currentState.dateRangeEnd ?: LocalDate.now()
+        } else {
+            currentState.dateRangeEnd ?: currentState.dateRangeStart ?: LocalDate.now()
+        }
+        
+        DatePickerDialog(
+            requireContext(),
+            { _, year, month, dayOfMonth ->
+                val selectedDate = LocalDate.of(year, month + 1, dayOfMonth)
+                val currentStart = currentState.dateRangeStart
+                val currentEnd = currentState.dateRangeEnd
+                
+                if (isStartDate) {
+                    // VALIDATE: START DATE SHOULD BE <= END DATE
+                    val newEnd = if (currentEnd != null && selectedDate.isAfter(currentEnd)) {
+                        selectedDate
+                    } else {
+                        currentEnd
+                    }
+                    viewModel.setDateRange(selectedDate, newEnd)
+                } else {
+                    // VALIDATE: END DATE SHOULD BE >= START DATE
+                    val newStart = if (currentStart != null && selectedDate.isBefore(currentStart)) {
+                        selectedDate
+                    } else {
+                        currentStart
+                    }
+                    viewModel.setDateRange(newStart, selectedDate)
+                }
+            },
+            currentDate.year,
+            currentDate.monthValue - 1,
+            currentDate.dayOfMonth
+        ).show()
+    }
+
+    private fun updateMonthlyGoals(goal: MonthlySpendingGoal?, currentMonthSpent: Double) {
+        // UPDATES THE MONTHLY GOALS DISPLAY WITH CURRENT VALUES.
+        binding.monthlySpentLabel.text = "This Month: ${formatCurrency(currentMonthSpent)}"
+        
+        val minGoalText = goal?.minGoal?.let { formatCurrency(it) } ?: "Not set"
+        val maxGoalText = goal?.maxGoal?.let { formatCurrency(it) } ?: "Not set"
+        
+        binding.monthlyMinGoal.text = minGoalText
+        binding.monthlyMaxGoal.text = maxGoalText
+        
+        // UPDATE STATUS MESSAGE
+        val statusText = buildStatusMessage(goal, currentMonthSpent)
+        if (statusText.isNotEmpty()) {
+            binding.monthlyGoalsStatus.text = statusText
+            binding.monthlyGoalsStatus.visibility = View.VISIBLE
+        } else {
+            binding.monthlyGoalsStatus.visibility = View.GONE
+        }
+    }
+
+    private fun buildStatusMessage(goal: com.example.oinkonomics.data.MonthlySpendingGoal?, currentMonthSpent: Double): String {
+        // BUILDS A STATUS MESSAGE BASED ON GOALS AND CURRENT SPENDING.
+        if (goal == null) return ""
+        
+        val messages = mutableListOf<String>()
+        
+        goal.minGoal?.let { min ->
+            if (currentMonthSpent < min) {
+                val diff = min - currentMonthSpent
+                messages.add("Below min goal by ${formatCurrency(diff)}")
+            }
+        }
+        
+        goal.maxGoal?.let { max ->
+            if (currentMonthSpent > max) {
+                val diff = currentMonthSpent - max
+                messages.add("Over max goal by ${formatCurrency(diff)}")
+            } else if (currentMonthSpent >= max * 0.9) {
+                val remaining = max - currentMonthSpent
+                messages.add("Close to max goal (${formatCurrency(remaining)} remaining)")
+            }
+        }
+        
+        if (messages.isEmpty() && goal.minGoal != null && goal.maxGoal != null) {
+            if (currentMonthSpent >= goal.minGoal && currentMonthSpent <= goal.maxGoal) {
+                messages.add("Within goal range")
+            }
+        }
+        
+        return messages.joinToString(" • ")
+    }
+
+    private fun showMonthlyGoalsDialog() {
+        // PRESENTS A DIALOG FOR SETTING MONTHLY SPENDING GOALS.
+        val currentGoal = viewModel.uiState.value.monthlyGoal
+        
+        val dialogView = layoutInflater.inflate(R.layout.dialog_monthly_goals, null)
+        val minGoalInput = dialogView.findViewById<EditText>(R.id.input_min_goal)
+        val maxGoalInput = dialogView.findViewById<EditText>(R.id.input_max_goal)
+        
+        minGoalInput.setText(currentGoal?.minGoal?.let { plainFormatter.format(it) } ?: "")
+        maxGoalInput.setText(currentGoal?.maxGoal?.let { plainFormatter.format(it) } ?: "")
+        
+        val dialog = AlertDialog.Builder(requireContext())
+            .setTitle("Set Monthly Spending Goals")
+            .setView(dialogView)
+            .setPositiveButton("Save", null)
+            .setNegativeButton("Cancel", null)
+            .setNeutralButton("Clear", null)
+            .create()
+        
+        dialog.setOnShowListener {
+            val positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            val neutralButton = dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
+            
+            positiveButton.setOnClickListener {
+                val minGoal = minGoalInput.text.toString().toDoubleOrNull()
+                val maxGoal = maxGoalInput.text.toString().toDoubleOrNull()
+                
+                // VALIDATE: IF BOTH ARE SET, MAX SHOULD BE >= MIN
+                if (minGoal != null && maxGoal != null && maxGoal < minGoal) {
+                    Toast.makeText(requireContext(), "Max goal must be greater than or equal to min goal", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                
+                viewModel.setMonthlyGoal(minGoal, maxGoal)
+                dialog.dismiss()
+            }
+            
+            neutralButton.setOnClickListener {
+                viewModel.setMonthlyGoal(null, null)
+                dialog.dismiss()
+            }
+        }
+        
+        dialog.show()
+    }
+
+    private fun renderExpenses(expenses: List<Expense>, categories: List<BudgetCategory>, startDate: LocalDate?, endDate: LocalDate?) {
+        // BUILDS A GROUPED LIST OF MONTH HEADERS AND EXPENSES, FILTERED BY DATE RANGE.
         val categoryNames = categories.associate { it.id to it.name }
-        val sortedExpenses = expenses.sortedWith(
+        
+        // FILTER EXPENSES BY DATE RANGE
+        val filteredExpenses = expenses.filter { expense ->
+            val expenseDate = expense.localDate
+            when {
+                startDate != null && endDate != null -> {
+                    !expenseDate.isBefore(startDate) && !expenseDate.isAfter(endDate)
+                }
+                startDate != null -> !expenseDate.isBefore(startDate)
+                endDate != null -> !expenseDate.isAfter(endDate)
+                else -> true
+            }
+        }
+        
+        val sortedExpenses = filteredExpenses.sortedWith(
             compareByDescending<Expense> { it.localDate }
                 .thenByDescending { it.createdAtEpochMillis }
         )
