@@ -195,8 +195,18 @@ class OinkonomicsRepository(context: Context) {
             firestore.runTransaction { transaction ->
                 val expenseRef = userDoc.collection(COLLECTION_EXPENSES).document(expenseId.toString())
                 Log.d(TAG, "Transaction creating expense doc=${expenseRef.path}")
+                // READ CATEGORY DOCUMENT FIRST IF NEEDED
+                val categoryRef = if (categoryId != null) {
+                    userDoc.collection(COLLECTION_CATEGORIES).document(categoryId.toString())
+                } else null
+                val categorySnap = categoryRef?.let { transaction.get(it) }
+                // NOW PERFORM ALL WRITES
                 transaction.set(expenseRef, expense.toMap())
-                transaction.adjustCategorySpent(userDoc, categoryId, amount)
+                if (categorySnap?.exists() == true) {
+                    val current = categorySnap.getNumeric(FIELD_SPENT_AMOUNT) ?: 0.0
+                    val updated = max(0.0, current + amount)
+                    transaction.update(categoryRef!!, FIELD_SPENT_AMOUNT, updated)
+                }
             }.await()
             Log.d(TAG, "Created expense id=$expenseId for userId=$userId")
             expense
@@ -219,21 +229,42 @@ class OinkonomicsRepository(context: Context) {
             val result = firestore.runTransaction { transaction ->
                 val expenseRef = userDoc.collection(COLLECTION_EXPENSES).document(expense.id.toString())
                 Log.d(TAG, "Transaction updating expense doc=${expenseRef.path}")
+                // READ ALL DOCUMENTS FIRST
                 val snapshot = transaction.get(expenseRef)
                 if (!snapshot.exists()) {
                     Log.w(TAG, "Expense document ${expenseRef.path} missing during update")
                     return@runTransaction false
                 }
+                // READ CATEGORY DOCUMENTS BEFORE ANY WRITES
+                val oldCategoryRef = if (existing.categoryId != null) {
+                    userDoc.collection(COLLECTION_CATEGORIES).document(existing.categoryId.toString())
+                } else null
+                val newCategoryRef = if (expense.categoryId != null) {
+                    userDoc.collection(COLLECTION_CATEGORIES).document(expense.categoryId.toString())
+                } else null
+                val oldCategorySnap = oldCategoryRef?.let { transaction.get(it) }
+                val newCategorySnap = newCategoryRef?.let { transaction.get(it) }
+                // NOW PERFORM ALL WRITES
                 transaction.set(expenseRef, expense.toMap(), SetOptions.merge())
                 if (existing.categoryId != expense.categoryId) {
                     Log.d(TAG, "Expense category changed from ${existing.categoryId} to ${expense.categoryId}")
-                    transaction.adjustCategorySpent(userDoc, existing.categoryId, -existing.amount)
-                    transaction.adjustCategorySpent(userDoc, expense.categoryId, expense.amount)
+                    if (oldCategorySnap?.exists() == true) {
+                        val current = oldCategorySnap.getNumeric(FIELD_SPENT_AMOUNT) ?: 0.0
+                        val updated = max(0.0, current - existing.amount)
+                        transaction.update(oldCategoryRef!!, FIELD_SPENT_AMOUNT, updated)
+                    }
+                    if (newCategorySnap?.exists() == true) {
+                        val current = newCategorySnap.getNumeric(FIELD_SPENT_AMOUNT) ?: 0.0
+                        val updated = max(0.0, current + expense.amount)
+                        transaction.update(newCategoryRef!!, FIELD_SPENT_AMOUNT, updated)
+                    }
                 } else {
                     val delta = expense.amount - existing.amount
-                    if (delta != 0.0) {
+                    if (delta != 0.0 && newCategorySnap?.exists() == true) {
                         Log.d(TAG, "Adjusting category spend by delta=$delta for categoryId=${expense.categoryId}")
-                        transaction.adjustCategorySpent(userDoc, expense.categoryId, delta)
+                        val current = newCategorySnap.getNumeric(FIELD_SPENT_AMOUNT) ?: 0.0
+                        val updated = max(0.0, current + delta)
+                        transaction.update(newCategoryRef!!, FIELD_SPENT_AMOUNT, updated)
                     }
                 }
                 true
@@ -255,6 +286,7 @@ class OinkonomicsRepository(context: Context) {
             val result = firestore.runTransaction { transaction ->
                 val expenseRef = userDoc.collection(COLLECTION_EXPENSES).document(expenseId.toString())
                 Log.d(TAG, "Transaction deleting expense doc=${expenseRef.path}")
+                // READ ALL DOCUMENTS FIRST
                 val snapshot = transaction.get(expenseRef)
                 if (!snapshot.exists()) {
                     Log.w(TAG, "Expense document ${expenseRef.path} not found during delete")
@@ -264,8 +296,18 @@ class OinkonomicsRepository(context: Context) {
                     Log.w(TAG, "Unable to parse expense snapshot for doc=${expenseRef.path}")
                     return@runTransaction false
                 }
+                // READ CATEGORY DOCUMENT BEFORE ANY WRITES
+                val categoryRef = if (expense.categoryId != null) {
+                    userDoc.collection(COLLECTION_CATEGORIES).document(expense.categoryId.toString())
+                } else null
+                val categorySnap = categoryRef?.let { transaction.get(it) }
+                // NOW PERFORM ALL WRITES
                 transaction.delete(expenseRef)
-                transaction.adjustCategorySpent(userDoc, expense.categoryId, -expense.amount)
+                if (categorySnap?.exists() == true) {
+                    val current = categorySnap.getNumeric(FIELD_SPENT_AMOUNT) ?: 0.0
+                    val updated = max(0.0, current - expense.amount)
+                    transaction.update(categoryRef!!, FIELD_SPENT_AMOUNT, updated)
+                }
                 true
             }.await()
             Log.d(TAG, "Deleted expense id=$expenseId for userId=$userId result=$result")
