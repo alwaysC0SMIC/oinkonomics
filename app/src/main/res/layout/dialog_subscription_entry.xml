@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:orientation="vertical"
+	android:padding="16dp">
+
+	<EditText
+		android:id="@+id/input_subscription_name"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:hint="Name" />
+
+	<EditText
+		android:id="@+id/input_subscription_amount"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:hint="Amount"
+		android:inputType="numberDecimal" />
+
+	<EditText
+		android:id="@+id/input_subscription_date"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:focusable="false"
+		android:hint="Date" />
+
+	<ImageView
+		android:id="@+id/icon_preview"
+		android:layout_width="72dp"
+		android:layout_height="72dp"
+		android:layout_marginTop="8dp"
+		android:background="@drawable/circle_gray"
+		android:clipToOutline="true"
+		android:scaleType="centerCrop"
+		android:contentDescription="Icon preview"
+		android:visibility="gone" />
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="8dp"
+		android:orientation="horizontal">
+
+		<Button
+			android:id="@+id/button_choose_icon"
+			android:layout_width="0dp"
+			android:layout_height="48dp"
+			android:layout_weight="1"
+			android:text="Choose image"
+			android:textAllCaps="false" />
+
+		<Button
+			android:id="@+id/button_remove_icon"
+			android:layout_width="0dp"
+			android:layout_height="48dp"
+			android:layout_marginStart="8dp"
+			android:layout_weight="1"
+			android:text="Remove image"
+			android:textAllCaps="false"
+			android:visibility="gone" />
+	</LinearLayout>
+
+</LinearLayout>
+
+

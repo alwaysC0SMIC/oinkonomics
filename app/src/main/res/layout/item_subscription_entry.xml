@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:layout_marginBottom="12dp"
+	android:background="@drawable/card_background"
+	android:clickable="true"
+	android:elevation="6dp"
+	android:focusable="true"
+	android:minHeight="88dp"
+	android:orientation="horizontal"
+	android:padding="16dp">
+
+	<ImageView
+		android:id="@+id/sub_icon"
+		android:layout_width="40dp"
+		android:layout_height="40dp"
+		android:layout_marginEnd="16dp"
+		android:background="@drawable/circle_gray"
+		android:clipToOutline="true"
+		android:scaleType="centerCrop"
+		android:contentDescription="Subscription icon" />
+
+	<LinearLayout
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_weight="1"
+		android:orientation="vertical">
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:gravity="center_vertical"
+			android:orientation="horizontal">
+
+			<TextView
+				android:id="@+id/sub_name"
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:text="Service"
+				android:textColor="#333333"
+				android:textSize="18sp"
+				android:textStyle="bold"
+				android:maxLines="1"
+				android:ellipsize="end" />
+
+			<TextView
+				android:id="@+id/sub_amount"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:text="R0.00"
+				android:textColor="#333333"
+				android:textSize="16sp"
+				android:textStyle="bold" />
+		</LinearLayout>
+
+		<TextView
+			android:id="@+id/sub_renews"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="4dp"
+			android:text="Renews 1 Sep"
+			android:textColor="#666666"
+			android:textSize="12sp" />
+	</LinearLayout>
+
+</LinearLayout>
+
+

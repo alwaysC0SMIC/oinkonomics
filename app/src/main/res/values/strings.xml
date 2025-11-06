@@ -49,5 +49,12 @@
   <string name="home_delete_expense_message">Are you sure you want to delete this expense?</string>
   <string name="home_total_spent_label">Total Budget Spent</string>
   <string name="logout">Log out</string>
+  <!-- SUBSCRIPTIONS -->
+  <string name="subs_add_title">New Subscription</string>
+  <string name="subs_edit_title">Edit Subscription</string>
+  <!-- DEBT -->
+  <string name="debt_add_title">New Debt</string>
+  <string name="debt_edit_title">Edit Debt</string>
+  <string name="debt_invalid_inputs">Please enter a name, valid totals, and due date.</string>
 </resources>
 

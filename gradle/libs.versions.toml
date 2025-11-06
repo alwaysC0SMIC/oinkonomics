@@ -16,6 +16,7 @@ navigationUiKtx = "2.9.5"
 kotlinxCoroutines = "1.9.0"
 firebaseBom = "33.5.1"
 googleServices = "4.4.2"
+desugarJdk = "2.1.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -35,6 +36,7 @@ firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.r
 firebase-firestore-ktx = { group = "com.google.firebase", name = "firebase-firestore-ktx" }
 firebase-common-ktx = { group = "com.google.firebase", name = "firebase-common-ktx" }
 kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "kotlinxCoroutines" }
+desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdk" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

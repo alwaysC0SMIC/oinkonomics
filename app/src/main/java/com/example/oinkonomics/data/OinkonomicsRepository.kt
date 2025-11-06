@@ -396,6 +396,26 @@ class OinkonomicsRepository(context: Context) {
         FIELD_CREATED_AT to createdAtEpochMillis
     )
 
+    fun Subscription.toMap(): Map<String, Any?> = mapOf(
+        FIELD_ID to id,
+        FIELD_USER_ID to userId,
+        FIELD_NAME to name,
+        FIELD_AMOUNT to amount,
+        FIELD_DATE_ISO to dateIso,
+        FIELD_ICON_URI to iconUri,
+        FIELD_CREATED_AT to createdAtEpochMillis
+    )
+
+    fun Debt.toMap(): Map<String, Any?> = mapOf(
+        FIELD_ID to id,
+        FIELD_USER_ID to userId,
+        FIELD_NAME to name,
+        FIELD_TOTAL_AMOUNT to totalAmount,
+        FIELD_PAID_AMOUNT to paidAmount,
+        FIELD_DUE_DATE_ISO to dueDateIso,
+        FIELD_CREATED_AT to createdAtEpochMillis
+    )
+
     private fun DocumentSnapshot.toBudgetCategory(userId: Long): BudgetCategory? {
         val name = getString(FIELD_NAME) ?: return null
         val maxAmount = getNumeric(FIELD_MAX_AMOUNT) ?: return null
@@ -436,6 +456,155 @@ class OinkonomicsRepository(context: Context) {
         )
     }
 
+    private fun DocumentSnapshot.toSubscription(userId: Long): Subscription? {
+        val name = getString(FIELD_NAME) ?: return null
+        val amount = getNumeric(FIELD_AMOUNT) ?: return null
+        val dateIso = getString(FIELD_DATE_ISO) ?: return null
+        val createdAt = when (val value = get(FIELD_CREATED_AT)) {
+            is Number -> value.toLong()
+            is String -> value.toLongOrNull()
+            else -> null
+        } ?: System.currentTimeMillis()
+        val iconUri = getString(FIELD_ICON_URI)
+        return Subscription(
+            id = getLong(FIELD_ID) ?: id.toLongOrNull() ?: return null,
+            userId = userId,
+            name = name,
+            amount = amount,
+            dateIso = dateIso,
+            iconUri = iconUri,
+            createdAtEpochMillis = createdAt
+        )
+    }
+
+    private fun DocumentSnapshot.toDebt(userId: Long): Debt? {
+        val name = getString(FIELD_NAME) ?: return null
+        val total = getNumeric(FIELD_TOTAL_AMOUNT) ?: return null
+        val paid = getNumeric(FIELD_PAID_AMOUNT) ?: 0.0
+        val dueIso = getString(FIELD_DUE_DATE_ISO) ?: return null
+        val createdAt = when (val value = get(FIELD_CREATED_AT)) {
+            is Number -> value.toLong()
+            is String -> value.toLongOrNull()
+            else -> null
+        } ?: System.currentTimeMillis()
+        return Debt(
+            id = getLong(FIELD_ID) ?: id.toLongOrNull() ?: return null,
+            userId = userId,
+            name = name,
+            totalAmount = total,
+            paidAmount = paid,
+            dueDateIso = dueIso,
+            createdAtEpochMillis = createdAt
+        )
+    }
+
+    suspend fun getDebts(userId: Long): List<Debt> = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Fetching debts for userId=$userId")
+        ensureValidUser(userId)
+        val snapshot = userDocument(userId).collection(COLLECTION_DEBTS).get().await()
+        snapshot.documents.mapNotNull { it.toDebt(userId) }
+    }
+
+    suspend fun createDebt(
+        userId: Long,
+        name: String,
+        totalAmount: Double,
+        paidAmount: Double,
+        dueDate: LocalDate
+    ): Debt = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Creating debt for userId=$userId name=$name total=$totalAmount paid=$paidAmount due=$dueDate")
+        ensureValidUser(userId)
+        val id = generateStableId()
+        val debt = Debt(
+            id = id,
+            userId = userId,
+            name = name,
+            totalAmount = totalAmount,
+            paidAmount = paidAmount,
+            dueDateIso = dueDate.toString()
+        )
+        userDocument(userId).collection(COLLECTION_DEBTS).document(id.toString()).set(debt.toMap()).await()
+        debt
+    }
+
+    suspend fun updateDebt(debt: Debt): Boolean = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Updating debt id=${debt.id} for userId=${debt.userId}")
+        ensureValidUser(debt.userId)
+        val ref = userDocument(debt.userId).collection(COLLECTION_DEBTS).document(debt.id.toString())
+        val exists = ref.get().await().exists()
+        if (!exists) return@withContext false
+        ref.set(debt.toMap(), SetOptions.merge()).await()
+        true
+    }
+
+    suspend fun deleteDebt(debtId: Long, userId: Long): Boolean = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Deleting debt id=$debtId for userId=$userId")
+        ensureValidUser(userId)
+        val ref = userDocument(userId).collection(COLLECTION_DEBTS).document(debtId.toString())
+        val exists = ref.get().await().exists()
+        if (!exists) return@withContext false
+        ref.delete().await()
+        true
+    }
+
+    suspend fun getSubscriptions(userId: Long): List<Subscription> = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Fetching subscriptions for userId=$userId")
+        ensureValidUser(userId)
+        val snapshot = userDocument(userId)
+            .collection(COLLECTION_SUBSCRIPTIONS)
+            .get()
+            .await()
+        snapshot.documents.mapNotNull { it.toSubscription(userId) }
+    }
+
+    suspend fun createSubscription(
+        userId: Long,
+        name: String,
+        amount: Double,
+        date: LocalDate,
+        iconUri: String?
+    ): Subscription = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Creating subscription for userId=$userId name=$name amount=$amount date=$date")
+        ensureValidUser(userId)
+        val subId = generateStableId()
+        val subscription = Subscription(
+            id = subId,
+            userId = userId,
+            name = name,
+            amount = amount,
+            dateIso = date.toString(),
+            iconUri = iconUri
+        )
+        userDocument(userId)
+            .collection(COLLECTION_SUBSCRIPTIONS)
+            .document(subId.toString())
+            .set(subscription.toMap())
+            .await()
+        subscription
+    }
+
+    suspend fun updateSubscription(subscription: Subscription): Boolean = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Updating subscription id=${subscription.id} for userId=${subscription.userId}")
+        ensureValidUser(subscription.userId)
+        val ref = userDocument(subscription.userId)
+            .collection(COLLECTION_SUBSCRIPTIONS)
+            .document(subscription.id.toString())
+        val exists = ref.get().await().exists()
+        if (!exists) return@withContext false
+        ref.set(subscription.toMap(), SetOptions.merge()).await()
+        true
+    }
+
+    suspend fun deleteSubscription(subscriptionId: Long, userId: Long): Boolean = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Deleting subscription id=$subscriptionId for userId=$userId")
+        ensureValidUser(userId)
+        val ref = userDocument(userId).collection(COLLECTION_SUBSCRIPTIONS).document(subscriptionId.toString())
+        val exists = ref.get().await().exists()
+        if (!exists) return@withContext false
+        ref.delete().await()
+        true
+    }
+
     private fun DocumentSnapshot.getNumeric(fieldName: String): Double? {
         val value = get(fieldName) ?: return null
         return when (value) {
@@ -471,6 +640,8 @@ class OinkonomicsRepository(context: Context) {
         private const val COLLECTION_USERS = "users"
         private const val COLLECTION_CATEGORIES = "categories"
         private const val COLLECTION_EXPENSES = "expenses"
+        private const val COLLECTION_SUBSCRIPTIONS = "subscriptions"
+        private const val COLLECTION_DEBTS = "debts"
 
         private const val FIELD_ID = "id"
         private const val FIELD_USER_ID = "userId"
@@ -483,6 +654,10 @@ class OinkonomicsRepository(context: Context) {
         private const val FIELD_AMOUNT = "amount"
         private const val FIELD_DATE_ISO = "dateIso"
         private const val FIELD_RECEIPT_URI = "receiptUri"
+        private const val FIELD_ICON_URI = "iconUri"
         private const val FIELD_CREATED_AT = "createdAtEpochMillis"
+        private const val FIELD_TOTAL_AMOUNT = "totalAmount"
+        private const val FIELD_PAID_AMOUNT = "paidAmount"
+        private const val FIELD_DUE_DATE_ISO = "dueDateIso"
     }
 }
