@@ -8,12 +8,12 @@
 
     <item
         android:id="@+id/navigation_piggybanks"
-        android:icon="@drawable/ic_dashboard_black_24dp"
+        android:icon="@drawable/ic_coin_24dp"
         android:title="@string/title_piggybanks" />
 
     <item
         android:id="@+id/navigation_debttracker"
-        android:icon="@drawable/ic_notifications_black_24dp"
+        android:icon="@drawable/ic_debt_24dp"
         android:title="@string/title_debttracker" />
 
     <item
@@ -23,7 +23,7 @@
 
     <item
         android:id="@+id/navigation_more"
-        android:icon="@drawable/ic_notifications_black_24dp"
+        android:icon="@drawable/ic_person_24dp"
         android:title="@string/title_more" />
 
 </menu>
