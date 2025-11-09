@@ -2,6 +2,10 @@
 
 A concise, modern Android app for personal budgeting: track spending, manage categories, monitor debts, and keep subscriptions in check — all with a simple, persistent bottom navigation.
 
+## Demo Video
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/KPrnvvaC84I" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
 ## Features
 - **Home overview**: quick snapshot of recent activity and totals.
 - **Categories (Piggy Banks)**: create budgets with max and spent amounts; edit anytime.
