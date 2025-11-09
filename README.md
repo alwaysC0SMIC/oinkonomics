@@ -4,7 +4,7 @@ A concise, modern Android app for personal budgeting: track spending, manage cat
 
 ## Demo Video
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/KPrnvvaC84I" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/KPrnvvaC84I?si=-RaSffoyesg_dKpm" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 ## Features
 - **Home overview**: quick snapshot of recent activity and totals.
