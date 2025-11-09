@@ -4,7 +4,7 @@ A concise, modern Android app for personal budgeting: track spending, manage cat
 
 ## Demo Video
 
-[![Oinkonomics Demo Video](https://img.youtube.com/vi/KPrnvvaC84I/maxresdefault.jpg)](https://www.youtube.com/watch?v=KPrnvvaC84I)
+[Watch the demo video](https://www.youtube.com/watch?v=KPrnvvaC84I)
 
 ## Features
 - **Home overview**: quick snapshot of recent activity and totals.
